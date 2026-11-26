@@ -1,3 +1,7 @@
 node_modules/
 .vercel/
 .tanstack/
+node_modules/
+.wrangler/
+.dev.vars
+*.zip

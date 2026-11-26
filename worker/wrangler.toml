@@ -1,0 +1,59 @@
+# Konfigurasi deploy Cloudflare Worker untuk GoWithDME AI / Dea / DME AI
+# Nama "dme-ai" sengaja dibuat beda dari Worker situs utama ("gowithdme"),
+# supaya situs utama tidak tertimpa.
+name = "dme-ai"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+account_id = "627504cc62bf7d8f130421ccd02e51d9"
+workers_dev = true
+
+[vars]
+# Domain yang boleh memanggil Worker ini (pisahkan dengan koma jika lebih dari satu)
+ALLOWED_ORIGINS = "https://ai.gowithdme.com,https://search.gowithdme.com"
+
+# Model AI (teks biasa, BUKAN rahasia). Dibaca worker.js lewat env.GEMINI_MODEL dan env.GROQ_MODEL.
+# Ganti nama model di sini lalu deploy ulang; kode tidak perlu diubah.
+# Gemini = model utama. Groq = cadangan otomatis bila Gemini galat / timeout / kena batas.
+GEMINI_MODEL = "gemini-4-hydrogen"
+GROQ_MODEL = "openai/gpt-oss-120b"
+
+# KUNCI API JANGAN ditulis di berkas ini. Isi sebagai Secret di Cloudflare Dashboard:
+#   GEMINI_API_KEY, GROQ_API_KEY (dan SUPABASE_URL, SUPABASE_SERVICE_KEY, ALERT_WEBHOOK_URL bila dipakai).
+# Pencarian internet Dea (search.js): isi SALAH SATU secret TAVILY_API_KEY (tavily.com) atau SERPER_API_KEY (serper.dev).
+#   Bila dua-duanya ada, Tavily dipakai; paksa lewat SEARCH_PROVIDER = "serper" (teks biasa). Tanpa keduanya, Dea memakai cadangan Gemini + Google Search,
+#   dan log Worker mencatat SEARCH_NO_KEY. Cek status: GET /health -> "search": "tavily" | "serper" | null.
+# Secret tidak ikut terhapus saat deploy; Teks (vars) yang hanya diisi lewat dashboard bisa tertimpa oleh blok [vars] ini.
+
+# Browse latar belakang (browse.js): setelah pencarian internet, Dea membaca 1-2 halaman teratas memakai aturan blokir + log dari database repo browser.
+# Tidak ada tampilan baru di halaman utama. Dua nilai di bawah sama dengan wrangler.toml repo browser (kunci publishable memang publik).
+# Wajib satu SECRET: BROWSER_LOG_SECRET  (nilai sama dengan LOG_SECRET Worker proxy browser; ambil di Supabase: select value from browser_settings where key='proxy_secret';)
+#   Pasang:  cd worker && npx wrangler secret put BROWSER_LOG_SECRET     Tanpa secret ini browse mati diam-diam (cek GET /health -> "browse": true/false).
+# Opsional (teks biasa): BROWSE = "off" mematikan browse; BROWSE_LOG = "off" berhenti mencatat bacaan halaman ke statistik browser.
+BROWSER_SUPABASE_URL = "https://jhqkylnqvhrljpaknjcg.supabase.co"
+BROWSER_SUPABASE_ANON_KEY = "sb_publishable_WEpourxfk4IKga2XyxKucQ_hkmxuJnY"
+
+# Batas jatah (guard.js). Hapus tanda # untuk mengubah, lalu deploy ulang. Foto/PDF dihitung 3 pesan.
+# QUOTA_GUEST = "40"   # pesan per hari untuk tamu (reset 00.00 WIB)
+# QUOTA_USER  = "200"  # pesan per hari untuk akun login
+# BURST_GUEST = "10"   # pesan per menit, tamu
+# BURST_USER  = "20"   # pesan per menit, akun login
+
+# Workers Logs: simpan log (AI_FAIL, MODEL_DEAD, NET_FAIL, SIGNAL, dll.) supaya bisa dicari di dashboard Cloudflare > Observability.
+# Log aplikasi TIDAK memuat isi pesan, IP, atau user_id (lihat baris SIGNAL di worker.js).
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# Pemeriksaan model harian 08.00 WIB (01.00 UTC): mendeteksi model yang dimatikan penyedia sebelum pengguna kena
+[triggers]
+crons = ["0 1 * * *"]
+
+# Penghitung jatah per akun/tamu (guard.js). Durable Object = konsisten antar-isolate, berbeda dengan Map di memori.
+# new_sqlite_classes dipakai karena paket gratis hanya mendukung Durable Object berbasis SQLite.
+[[durable_objects.bindings]]
+name = "LIMITER"
+class_name = "Limiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Limiter"]

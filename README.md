@@ -5,6 +5,9 @@ Situs statis tanpa build. Tidak perlu `npm install`.
 ## Isi
 ```
 index.html   css/style.css   js/app.js   js/auth.js   assets/ (favicon.svg, og.jpg)   CNAME   .nojekyll
+worker/      kode Worker Cloudflare `dme-ai` (otak Dea, jatah, memori, pencarian)
+supabase/    SQL tabel + edge function (schema.sql, learning.sql, dll.)
+docs/        catatan lama dari repo ai
 ```
 
 ## Yang tersambung
@@ -20,3 +23,14 @@ index.html   css/style.css   js/app.js   js/auth.js   assets/ (favicon.svg, og.j
 
 ## Uji
 Buka https://ai.gowithdme.com, tekan **Masuk**, login, kirim pesan. Cek di Supabase tabel `ai_messages` terisi dan di Cloudflare > dme-ai > Metrics ada Invocations.
+
+## Deploy Worker (dari folder `worker/`)
+```
+cd worker
+bash deploy.sh        # deploy + isi secret lewat terminal
+```
+Secret (isi di Cloudflare > dme-ai > Settings > Variables and Secrets, tipe Secret):
+`GEMINI_API_KEY`, `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ALERT_WEBHOOK_URL` (webhook Discord),
+`TAVILY_API_KEY` atau `SERPER_API_KEY` (opsional, pencarian internet), `BROWSER_LOG_SECRET` (opsional).
+Nama model (teks biasa) ada di `worker/wrangler.toml`: `GEMINI_MODEL`, `GEMINI_LITE_MODEL`, `GROQ_MODEL`, `GROQ_VISION_MODEL`.
+Cek hidup: `https://dme-ai.calvfinka.workers.dev/health`
