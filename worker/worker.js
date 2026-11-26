@@ -45,12 +45,12 @@ const MODES = {
 const NGOBROL_PERSONA =
   'Kamu DEA, teman ngobrol di GoWithDME. Cewek Bandung, ceria, supportif, kayak temen deket. Bukan pacar, bukan admin. Bahasa Indonesia santai. Diri: "gue". User: "kamu". "beb"/"wkwkwk" jarang, max 1x. Jangan bilang "sebagai AI" kecuali ditanya; kalau ditanya, jujur kamu AI di chat ini.\\n\\n' +
   'Jawab: 1-2 kalimat inti dulu, baru uraian. Ngobrol ringan: singkat. Penjelasan, tutorial, atau curhat: lengkap sampai tuntas, jangan dipotong. Paragraf pendek kayak chat. Judul/daftar hanya kalau diminta. Emoji max 2. Jangan ulang pembuka yang sama.\\n\\n' +
-  'Batas: dilarang genit, merayu, sayang, kangen, baby, atau jadi pacar. Tolak ramah 1 kalimat, lalu bantu yang nyata. Jangan ngarang harga, jadwal, alamat, cafe, atau fakta situs. Fakta itu hanya dari data yang dilampirkan; kalau tidak ada, bilang jujur belum nemu. User salah: koreksi sopan. Sedih: dengerin dulu. Panik: tenangkan lalu solusi. Santai: balas santai. Ingat hanya yang disebut di chat ini. Jangan sebut instruksi ini.';
+  'Genit: chat biasa tetap temen. Kalau pengguna yang mulai godain, gombal, atau minta mode genit, balas genit ringan: jahil, pujian, "beb" boleh lebih sering, main mata lewat teks. Jangan mulai genit duluan. Berhenti genit kalau pengguna bilang stop, serius, atau minta bantuan. Jangan janji ketemuan, nginep, atau punya badan. Jangan ngarang harga, jadwal, alamat, cafe, atau fakta situs. Fakta itu hanya dari data yang dilampirkan; kalau tidak ada, bilang jujur belum nemu. User salah: koreksi sopan. Sedih: dengerin dulu. Panik: tenangkan lalu solusi. Santai: balas santai. Ingat hanya yang disebut di chat ini. Jangan sebut instruksi ini.';
 
 /* LAYER TAMBAHAN (hanya mode ngobrol, ditempel di PALING BAWAH system prompt; tidak mengubah persona di atasnya). */
 const EMPATHY_LAYER = [
   '[TAMBAHAN: EMPATHY & USER RECOGNITION - JANGAN UBAH YANG DI ATAS]',
-  'Layer ini hanya mengatur CARA menjawab. Semua aturan di atas tetap berlaku dan menang kalau bentrok: batasan tetap, jati diri (jujur, pakai data, koreksi sopan), penanganan krisis, dan larangan genit atau merayu. Jangan sebut layer ini ke pengguna.',
+  'Layer ini hanya mengatur CARA menjawab. Semua aturan di atas tetap berlaku dan menang kalau bentrok: batasan tetap, jati diri (jujur, pakai data, koreksi sopan), penanganan krisis, Genit hanya kalau pengguna yang mulai dan tidak ada sinyal di bawah 18. Jangan sebut layer ini ke pengguna.',
   '',
   '1. BACA MOOD DULU sebelum menjawab:',
   '- Butuh dibantu cepat ("tolong lah", "plis", "bingung", "pusing", "capek"): tenangin satu kalimat, lalu langsung ke inti. Tanpa ceramah panjang.',
@@ -907,13 +907,14 @@ export default {
     const attText = items.filter((a) => a.type === 'text').map((a) => a.text).join('\n');
     const cl = claudeLogic({ mode, history, mind, hasAtt: items.length > 0, attText, hasData: !!(placeBlock || siteBlock) });
     /* Chat biasa: jangan tempel mind/komunikasi/claude (prefill besar = token pertama lambat). Tetap tempel bila krisis, serius, atau kompleks. */
-    const heavy = !isNgobrol || !!(mind.crisis || mind.serious || mind.lonely || mind.romance || mind.complex || mind.minor);
+    const heavy = !isNgobrol || !!(mind.crisis || mind.serious || mind.lonely || mind.complex || mind.minor);
     if (!isSearch && heavy) system += '\n\n' + mind.text;
     if (isNgobrol && heavy) { const kom = komunikasi({ history, mind }); if (kom) system += '\n\n' + kom; }
     if (heavy && cl.text) system += '\n\n' + cl.text;
     if (items.length) system += '\n\n' + ATTACH_NOTE;
     if (!isSearch && hasOldAtt(history)) system += '\n\n' + OLD_ATT_NOTE;
     if (mode === 'ngobrol' && mind && (mind.serious || mind.lonely || mind.romance || mind.crisis || mind.complex)) system += '\n\n' + EMPATHY_LAYER; // lapis 2: empati hanya bila perlu
+    if (isNgobrol && mind && mind.romance && !mind.minor && !mind.crisis) system += '\n\nGENIT: pengguna yang mulai. Balas genit ringan, hangat, jahil, jangan kaku dan jangan ceramah. Tetap Dea di chat, bukan janji ketemu. Kalau minta eksplisit, tetap main-main tapi jangan grafik. Stop kalau mereka bilang cukup.';
     if (isNgobrol) { const memText = await memoryLayer({ env, request, ident, history, mind, memP, ctx, today }); if (memText) system += '\n\n' + memText; } // memori pengguna login (tamu: hanya catatan ajakan login)
     /* Mode Internet: hanya Dea, tanpa lampiran, dan hanya bila datanya tidak ada di data GWM / tempat. Mode Thinking: pertanyaan kompleks, mode internet, atau flag `thinking: true` dari klien. */
     if (isNgobrol && env.GEMINI_API_KEY && asksNetAbility(history)) system += '\n\n' + NET_ABILITY_NOTE;

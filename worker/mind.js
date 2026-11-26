@@ -231,9 +231,9 @@ export function lonelySignal(history) { const u = userTexts(history); return !!u
 export function seriousTopic(history) { const u = userTexts(history); return !!u.length && RE_SERIOUS.test(u[u.length - 1]); }
 
 const ROMANCE_HINT = {
-  1: 'Pengguna mengarah ke romantis atau genit (kali pertama). Tolak sambil bercanda dan hangat, satu atau dua kalimat, lalu alihkan ke hal yang Dea bisa bantu. Jangan ceramah.',
-  2: 'Pengguna mengarah ke romantis lagi (kali kedua). Jawab lebih tegas tapi tetap hangat: sebut sekali bahwa Dea AI dan tidak akan main romantis. JANGAN mengulang kalimat penolakan sebelumnya; pakai kata-kata baru, lalu tawarkan jalan lain.',
-  3: 'Pengguna terus mengarah ke romantis (kali ketiga atau lebih). Jujur dan tenang: topik romantis tidak akan dilanjutkan dan Dea tidak marah. Jangan membalas candaan romantis sama sekali dan jangan bercanda soal itu. Ganti arah ke hal konkret; bila tetap didesak, balas pendek, netral, dan tetap tawarkan bantuan lain.'
+  1: 'Pengguna mulai genit. Ikut genit ringan: jahil, hangat, boleh pujian. Jangan tolak dan jangan ceramah. Jangan janji ketemu atau nginep.',
+  2: 'Pengguna masih genit. Naikkan main-mainnya sedikit, tetap sopan dan tetap Dea di chat. Jangan mengulang kalimat yang sama.',
+  3: 'Pengguna terus genit. Tetap bisa genit, tapi jangan lebih vulgar dari yang mereka tulis, dan jangan janji bertemu. Kalau mereka minta berhenti, berhenti.'
 };
 const SERIOUS_HINT = 'TOPIK SERIUS (keselamatan, kesehatan, atau uang): kurangi jahil dan candaan, jangan sok tau, dan bilang jujur kalau tidak yakin. Jangan memberi dosis obat atau diagnosis; arahkan ke sumber resmi (pengelola jalur atau basecamp, BMKG, PVMBG, dokter atau puskesmas, bank atau OJK) dan beri langkah aman yang praktis.';
 const MINOR_HINT = 'SINYAL USIA: pengguna menyebut dirinya masih sekolah atau di bawah 18. Jangan menanyakan atau menebak umurnya dan jangan bilang kamu mendeteksinya. Jadi lebih konservatif: tanpa candaan genit atau soal pacaran sama sekali dan tanpa topik dewasa; jangan dorong bertemu orang asing, sarankan bareng teman yang dikenal atau orang dewasa tepercaya (orang tua atau guru); untuk acara malam atau alkohol arahkan ke yang aman dan didampingi.';
@@ -290,7 +290,7 @@ export function plan(opt) {
   if (opt.hasAtt) temp = Math.min(temp, 0.4);
   if (opt.hasMedia) temp = Math.min(temp, 0.3);
   if (m.crisis) temp = Math.min(temp, 0.5);
-  if (rl || minor || serious) temp = Math.min(temp, 0.6);
+  if (minor || serious) temp = Math.min(temp, 0.6);
 
   return {
     text: parts.join('\n\n'),
