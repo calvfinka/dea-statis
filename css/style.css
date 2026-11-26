@@ -387,3 +387,6 @@ html.dark .i-moon, html:not(.dark) .i-sun { display: none; }
 .login-card .fine a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .stage-bar [data-auth] { height: 44px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 720px) { #login.voice { align-items: center; } }
+
+.login-grid .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.login-grid .btn svg { width: 18px; height: 18px; flex: none; }
