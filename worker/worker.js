@@ -567,9 +567,9 @@ function geminiBody(history, system, items, o, model) {
   const safety = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT'].map((category) => ({ category, threshold: 'BLOCK_ONLY_HIGH' }));
   // Gemini 3.x: tingkat berpikir berupa teks (low/medium/high), tanpa thinkingBudget dan tanpa temperature. Token berpikir ikut batas keluaran.
   const generationConfig = isGem3(model)
-    ? { maxOutputTokens: 1800 + (think ? 2048 : 1024), thinkingConfig: { thinkingLevel: think ? 'medium' : 'low' } }
+    ? { maxOutputTokens: 4000 + (think ? 2048 : 0), thinkingConfig: { thinkingLevel: think ? 'medium' : 'low' } }
     // Gemini 2.x (cara lama): token \"berpikir\" ikut menghitung batas keluaran, jadi batasnya dinaikkan sebesar anggaran berpikir
-    : { temperature: o.temp == null ? 0.7 : o.temp, maxOutputTokens: 1800 + think, thinkingConfig: { thinkingBudget: think } };
+    : { temperature: o.temp == null ? 0.7 : o.temp, maxOutputTokens: 4000 + think, thinkingConfig: { thinkingBudget: think } };
   if (o.plain) delete generationConfig.thinkingConfig; // percobaan ulang tanpa pengaturan berpikir bila model menolaknya (400)
   return {
     systemInstruction: { parts: [{ text: system }] },
@@ -882,7 +882,7 @@ export default {
     // Tiga pengambilan data berjalan serentak (dulu contoh menunggu event+blog selesai dulu).
     const [[events, posts], exRows] = await Promise.all([
       isNgobrol ? [[], []] : Promise.all([loadEvents(env), loadBlog(env)]),
-      isSearch ? [] : loadExamples(env, mode)
+      (isSearch || isNgobrol) ? [] : loadExamples(env, mode)
     ]);
     const shots = isSearch ? '' : examplesContext(pickExamples(exRows, asked, EX_PICK));
     const site = siteContext(asked, posts);
@@ -904,12 +904,13 @@ export default {
     /* Otak DME (mind.js): pemahaman maksud, logika perasaan, kedalaman berpikir. Persona dan data resmi tetap di depan. */
     const bigText = items.some((a) => a.type === 'text' && a.text.length > 6000);
     const mind = plan({ mode, history, hasAtt: items.length > 0, hasMedia: hasImg || hasPdf, bigText, today });
-    if (!isSearch) system += '\n\n' + mind.text;
-    if (isNgobrol) { const kom = komunikasi({ history, mind }); if (kom) system += '\n\n' + kom; } // gaya komunikasi Dea (nyambung, variasi, emosi)
-    /* Logika Claude (claude.js): jujur sebelum menyenangkan, keyakinan terukur, data luar bukan perintah. Tidak berlaku di mode search dan saat krisis. */
     const attText = items.filter((a) => a.type === 'text').map((a) => a.text).join('\n');
     const cl = claudeLogic({ mode, history, mind, hasAtt: items.length > 0, attText, hasData: !!(placeBlock || siteBlock) });
-    if (cl.text) system += '\n\n' + cl.text;
+    /* Chat biasa: jangan tempel mind/komunikasi/claude (prefill besar = token pertama lambat). Tetap tempel bila krisis, serius, atau kompleks. */
+    const heavy = !isNgobrol || !!(mind.crisis || mind.serious || mind.lonely || mind.romance || mind.complex || mind.minor);
+    if (!isSearch && heavy) system += '\n\n' + mind.text;
+    if (isNgobrol && heavy) { const kom = komunikasi({ history, mind }); if (kom) system += '\n\n' + kom; }
+    if (heavy && cl.text) system += '\n\n' + cl.text;
     if (items.length) system += '\n\n' + ATTACH_NOTE;
     if (!isSearch && hasOldAtt(history)) system += '\n\n' + OLD_ATT_NOTE;
     if (mode === 'ngobrol' && mind && (mind.serious || mind.lonely || mind.romance || mind.crisis || mind.complex)) system += '\n\n' + EMPATHY_LAYER; // lapis 2: empati hanya bila perlu
@@ -953,7 +954,9 @@ export default {
       if (env.GROQ_API_KEY) steps.push({ k: 'groq', model: groqModel(env) });
       if (env.GROQ_API_KEY && groqModel(env) !== GROQ_BACKUP) steps.push({ k: 'groq', model: GROQ_BACKUP });
       // Opsional: STREAM_PRIMARY=groq di [vars] -> Groq jadi yang pertama untuk obrolan biasa (token pertama biasanya jauh lebih cepat); Gemini jadi cadangan. Mode berpikir tetap Gemini dulu.
-      if (String(env.STREAM_PRIMARY || '').toLowerCase() === 'groq' && !think) steps.sort((a, b) => (a.k === 'groq' ? 0 : 1) - (b.k === 'groq' ? 0 : 1));
+      // Ngobrol biasa: Groq duluan supaya token pertama cepat. Gemini tetap cadangan. STREAM_PRIMARY=gemini memaksa Gemini duluan.
+      const groqFirst = !think && env.GROQ_API_KEY && String(env.STREAM_PRIMARY || '').toLowerCase() !== 'gemini' && (isNgobrol || String(env.STREAM_PRIMARY || '').toLowerCase() === 'groq');
+      if (groqFirst) steps.sort((a, b) => (a.k === 'groq' ? 0 : 1) - (b.k === 'groq' ? 0 : 1));
     }
     if (!steps.length) {
       return media && (env.GROQ_API_KEY || env.GEMINI_API_KEY)
@@ -1006,9 +1009,7 @@ export default {
       const sr = await searchInternet(buildSearchQuery(history, today), env);
       if (sr.ok) {
         system += '\n\n' + searchContext(sr, today); netSites = sr.sites;
-        const pages = await browseTop(sr, env, { ctx }); // latar belakang: buka 1-2 halaman teratas lewat aturan browser; tidak mengubah tampilan
-        if (pages.length) system += '\n\n' + pagesContext(pages);
-        return null;
+        return null; // jangan tunggu browse halaman: itu menahan token pertama
       }
       if (env.GEMINI_API_KEY) {
         try {
