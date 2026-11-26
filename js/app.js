@@ -430,17 +430,30 @@
     $("voice-kicker").textContent = "Suara · " + PERSONAS[state.persona].label;
     $("voice-note").textContent = "Tekan tombol, bicara dalam bahasa Indonesia, lalu diam. Dea akan menjawab dengan suara.";
   }
+  /* Suara Dea: pilih suara perempuan Indonesia yang ada di perangkat (Google/Microsoft/Apple), lalu atur nada dan kecepatan per persona. */
+  const FEMALE = /female|perempuan|wanita|gadis|damayanti|andika|indah|google bahasa indonesia|microsoft (gadis|indah)/i;
+  const MALE = /\bmale\b|\bpria\b|\bardi\b|rizki/i;
+  function pickVoice() {
+    const all = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("id"));
+    if (!all.length) return null;
+    return all.find((v) => FEMALE.test(v.name) && !MALE.test(v.name)) || all.find((v) => !MALE.test(v.name)) || all[0];
+  }
   function speak(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.slice(0, 500));
+    const clean = String(text || "").replace(/<!--[\s\S]*?-->/g, "").replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    const u = new SpeechSynthesisUtterance(clean.slice(0, 500));
     u.lang = "id-ID";
-    u.pitch = state.persona === "galak" ? 0.92 : state.persona === "manja" ? 1.18 : 1.12;
-    const voices = window.speechSynthesis.getVoices();
-    const id = voices.find((v) => v.lang.toLowerCase().startsWith("id"));
-    if (id) u.voice = id;
+    // Nada tinggi dan tempo sedikit cepat: terdengar muda, ceria, lembut.
+    u.pitch = state.persona === "galak" ? 1.0 : state.persona === "manja" ? 1.35 : 1.25;
+    u.rate = state.persona === "galak" ? 1.05 : 1.08;
+    const v = pickVoice();
+    if (v) u.voice = v;
     window.speechSynthesis.speak(u);
   }
+  // Daftar suara di sebagian browser baru terisi belakangan; muat ulang saat siap.
+  if (window.speechSynthesis && "onvoiceschanged" in window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 
   async function send(raw, opts) {
     const text = (raw || "").trim();
