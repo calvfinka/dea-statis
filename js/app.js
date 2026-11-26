@@ -476,8 +476,9 @@
     render();
     const history = chat.msgs.slice(-8);
     let answer = "";
-    liveText = "";
-    liveShown = false;
+    liveText = "Dea lagi ngetik…";
+    liveShown = true;
+    render();
     const onChunk = (t) => {
       if (token !== gen) return false;
       liveText = t;
