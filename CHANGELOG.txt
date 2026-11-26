@@ -1,0 +1,12 @@
+Berkas yang berubah (timpa di Codespace):
+
+1. worker/worker.js
+   - NGOBROL_PERSONA dikompres (~967 karakter)
+   - max_tokens 1800 -> 4000
+   - EMPATHY_LAYER hanya dilampirkan bila mind.serious / lonely / romance / crisis / complex
+   - Fungsi, endpoint, query Supabase TIDAK diubah
+
+Cara timpa:
+  cp worker/worker.js <repo-kamu>/worker/worker.js
+
+Lalu deploy ulang Worker.
