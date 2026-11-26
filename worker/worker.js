@@ -494,6 +494,11 @@ const gemModel = (env) => String((env && env.GEMINI_MODEL) || '').trim() || GEMI
 const groqModel = (env) => String((env && env.GROQ_MODEL) || '').trim() || GROQ_MODEL;
 const GEMINI_LITE = 'gemini-3.5-flash-lite'; // cadangan khusus lampiran bila Flash penuh/kena kuota
 const TIMEOUT_MS = 20000;
+/* Batas menunggu TOKEN PERTAMA per langkah (jalur streaming teks). Gemini 12 dtk, Groq 15 dtk: total terburuk 12+15+15 = 42 dtk, di bawah batas diam klien (45 dtk).
+   Sebelumnya 20+20+20 = 60 dtk, jadi klien menyerah lebih dulu dan pengguna mendapat jawaban lokal. Bisa diubah lewat env GEMINI_FIRST_MS / GROQ_FIRST_MS. */
+const GEMINI_FIRST_MS = 7000;
+const GROQ_FIRST_MS = 9000;
+const firstMs = (st, env) => (st.k === 'groq' ? (parseInt(env && env.GROQ_FIRST_MS, 10) || GROQ_FIRST_MS) : (parseInt(env && env.GEMINI_FIRST_MS, 10) || GEMINI_FIRST_MS));
 const MAX_MSGS = 12;
 const MAX_MSGS_NGOBROL = 30;
 const MAX_CHARS = 4000; // batas satu pesan pengguna (harus sama dengan lib/limits.js; dijaga tes)
@@ -952,8 +957,12 @@ export default {
     // Memori jangka panjang: hanya pengguna login di mode ngobrol; paralel dengan pengambilan lain, tidak pernah melempar.
     const memP = isNgobrol && ident.kind === 'user' ? loadMemory(env, memBearer(request), ident.id.slice(2)) : null;
     const siteP = isNgobrol ? siteFor(env, history, { pickKnowledge, pickMountains, loadEvents: (e) => loadEvents(e), loadBlog: (e) => loadBlog(e), pickEvents, eventContext, siteContext, fold, wibToday }) : Promise.resolve('');
-    const [events, posts] = isNgobrol ? [[], []] : await Promise.all([loadEvents(env), loadBlog(env)]);
-    const shots = isSearch ? '' : examplesContext(pickExamples(await loadExamples(env, mode), asked, EX_PICK));
+    // Tiga pengambilan data berjalan serentak (dulu contoh menunggu event+blog selesai dulu).
+    const [[events, posts], exRows] = await Promise.all([
+      isNgobrol ? [[], []] : Promise.all([loadEvents(env), loadBlog(env)]),
+      isSearch ? [] : loadExamples(env, mode)
+    ]);
+    const shots = isSearch ? '' : examplesContext(pickExamples(exRows, asked, EX_PICK));
     const site = siteContext(asked, posts);
     let system, sources = null, cards = [], placeBlock = '', siteBlock = '';
     if (isSearch) {
@@ -1021,6 +1030,8 @@ export default {
       if (env.GEMINI_API_KEY) steps.push({ k: 'gemini', model: gemModel(env) });
       if (env.GROQ_API_KEY) steps.push({ k: 'groq', model: groqModel(env) });
       if (env.GROQ_API_KEY && groqModel(env) !== GROQ_BACKUP) steps.push({ k: 'groq', model: GROQ_BACKUP });
+      // Opsional: STREAM_PRIMARY=groq di [vars] -> Groq jadi yang pertama untuk obrolan biasa (token pertama biasanya jauh lebih cepat); Gemini jadi cadangan. Mode berpikir tetap Gemini dulu.
+      if (String(env.STREAM_PRIMARY || '').toLowerCase() === 'groq' && !think) steps.sort((a, b) => (a.k === 'groq' ? 0 : 1) - (b.k === 'groq' ? 0 : 1));
     }
     if (!steps.length) {
       return media && (env.GROQ_API_KEY || env.GEMINI_API_KEY)
@@ -1034,9 +1045,10 @@ export default {
 
     /* Satu langkah model. Bila Gemini menolak pengaturan berpikir (400), ulangi sekali tanpa pengaturan itu sebelum pindah ke Groq. */
     const openStep = async (st) => {
+      const sms = media ? ms : firstMs(st, env); // media tetap 22 dtk; teks memakai batas token-pertama yang lebih ketat
       const run = (o) => st.k === 'groq'
-        ? openGroq(st.model, history, system, env.GROQ_API_KEY, items, ms, o)
-        : openGemini(history, system, env.GEMINI_API_KEY, items, ms, o, st.model);
+        ? openGroq(st.model, history, system, env.GROQ_API_KEY, items, sms, o)
+        : openGemini(history, system, env.GEMINI_API_KEY, items, sms, o, st.model);
       try { return await run(opts); }
       catch (e) { if (st.k === 'gemini' && e && e.status === 400) return await run({ ...opts, plain: true }); throw e; }
     };

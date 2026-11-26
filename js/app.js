@@ -16,6 +16,8 @@
   const $ = (id) => document.getElementById(id);
   let state = load();
   let pending = false;
+  let liveText = ""; // teks jawaban yang sedang mengalir dari Worker (kosong = belum ada / tidak streaming)
+  let liveShown = false;
   let gen = 0;
   let rec = null;
   let heard = "";
@@ -117,11 +119,14 @@
   }
 
   /* Balasan dari Worker `dme-ai`. "" = pakai otak lokal. Login = kirim token supaya jatah dihitung per akun. */
-  async function remoteReply(history) {
+  async function remoteReply(history, onChunk) {
     if (location.hostname !== "ai.gowithdme.com") return "";
     const message = history[history.length - 1].content;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 45000);
+    // Batas DIAM: abort hanya bila 45 dtk tidak ada byte baru (bukan batas total), jadi jawaban panjang yang terus mengalir tidak terpotong.
+    let timer = setTimeout(() => ctrl.abort(), 45000);
+    const bump = () => { clearTimeout(timer); timer = setTimeout(() => ctrl.abort(), 45000); };
+    let raw = "";
     try {
       const token = AUTH() ? await AUTH().token() : null;
       const res = await fetch("https://dme-ai.calvfinka.workers.dev", {
@@ -143,13 +148,21 @@
         }
         return "";
       }
-      return (await res.text())
-        .replace(/^\s*<!--dme:[\s\S]*?-->\n?/, "")
-        .replace(/<!--[\s\S]*?-->/g, "")
-        .replace(/^\s*_Dea lagi mikir\.\.\._\s*/, "")
-        .trim();
+      if (!res.body || !res.body.getReader) return cleanReply(await res.text());
+      const reader = res.body.getReader();
+      const dec = new TextDecoder("utf-8");
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        bump();
+        raw += dec.decode(value, { stream: true });
+        if (onChunk && onChunk(cleanReply(raw)) === false) { ctrl.abort(); return ""; }
+      }
+      raw += dec.decode();
+      return cleanReply(raw);
     } catch (e) {
-      return "";
+      // putus di tengah jalan: pakai teks yang sudah datang bila ada, kalau tidak, otak lokal
+      return cleanReply(raw);
     } finally {
       clearTimeout(timer);
     }
@@ -167,6 +180,27 @@
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
+  }
+  /* Streaming: bubble Dea yang tumbuh selagi jawaban datang. Hanya teks bubble yang diganti (tanpa render ulang seluruh halaman). */
+  function liveNode() {
+    const n = msgNode({ role: "dea", content: liveText });
+    n.classList.add("live");
+    return n;
+  }
+  function updateLive() {
+    document.querySelectorAll(".msg.live .bubble").forEach((b) => { b.textContent = liveText; });
+    document.querySelectorAll("#thread, #demo-log").forEach((s) => { s.scrollTop = s.scrollHeight; });
+  }
+  /* Bersihkan penanda Worker. Aman untuk teks yang belum lengkap (penanda terpotong tidak bocor ke layar). */
+  function cleanReply(t) {
+    let out = String(t)
+      .replace(/<!--[\s\S]*?-->\n?/g, "")
+      .replace(/<!--[\s\S]*$/, "")
+      .replace(/<!?-?$/, "")
+      .replace(/^\s*_Dea lagi mikir\.\.\._\s*/, "")
+      .trim();
+    if (out && "_Dea lagi mikir..._".startsWith(out)) out = "";
+    return out;
   }
   function msgNode(m) {
     const art = el("article", "msg" + (m.role === "user" ? " user" : ""));
@@ -225,7 +259,9 @@
     node.innerHTML = "";
     const list = msgs.length ? msgs.slice(-6) : [{ role: "dea", content: welcome }];
     list.forEach((m) => node.appendChild(m.role === "dea" && !msgs.length ? simpleDea(m.content) : msgNode(m)));
-    if (pending) {
+    if (pending && liveText) {
+      node.appendChild(liveNode());
+    } else if (pending) {
       const t = el("div", "typing");
       t.appendChild(el("i")); t.appendChild(el("i")); t.appendChild(el("i"));
       node.appendChild(t);
@@ -295,7 +331,9 @@
     } else {
       chat.msgs.forEach((m) => inner.appendChild(msgNode(m)));
     }
-    if (pending) {
+    if (pending && liveText) {
+      inner.appendChild(liveNode());
+    } else if (pending) {
       const t = el("div", "typing");
       t.appendChild(el("i")); t.appendChild(el("i")); t.appendChild(el("i"));
       inner.appendChild(t);
@@ -425,11 +463,22 @@
     render();
     const history = chat.msgs.slice(-8);
     let answer = "";
+    liveText = "";
+    liveShown = false;
+    const onChunk = (t) => {
+      if (token !== gen) return false;
+      liveText = t;
+      if (!t) return true;
+      if (!liveShown) { liveShown = true; render(); } else updateLive();
+      return true;
+    };
     try {
-      answer = (await remoteReply(history)) || localReply(state.persona, state.mode, history);
+      answer = (await remoteReply(history, onChunk)) || localReply(state.persona, state.mode, history);
     } catch (e) {
       answer = localReply(state.persona, state.mode, history);
     }
+    liveText = "";
+    liveShown = false;
     if (token !== gen) { pending = false; render(); return; }
     const deaMsg = { id: uid(), role: "dea", content: answer, at: Date.now() };
     chat.msgs.push(deaMsg);
@@ -495,7 +544,7 @@
   $("open-rail").addEventListener("click", () => { $("rail").classList.add("open"); $("scrim").hidden = false; });
   $("close-rail").addEventListener("click", closeRail);
   $("scrim").addEventListener("click", closeRail);
-  $("stop").addEventListener("click", () => { gen++; pending = false; if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); });
+  $("stop").addEventListener("click", () => { gen++; pending = false; liveText = ""; liveShown = false; if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); });
   $("theme-home").addEventListener("click", () => setTheme(theme() === "dark" ? "light" : "dark"));
   $("theme-chat").addEventListener("click", () => setTheme(theme() === "dark" ? "light" : "dark"));
   document.querySelectorAll("textarea").forEach((ta) => {
