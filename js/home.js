@@ -98,7 +98,6 @@
   document.querySelectorAll("a[data-soon]").forEach(function (a) {
     a.addEventListener("click", function (e) { e.preventDefault(); toast(a.getAttribute("data-soon")); });
   });
-  $("h-plus").addEventListener("click", function () { toast("Lampiran segera hadir."); });
   $("h-create").addEventListener("click", function () { $("h-create").classList.toggle("on"); toast($("h-create").classList.contains("on") ? "Mode Create aktif (tampilan saja dulu)." : "Mode Create mati."); });
   $("h-web").setAttribute("aria-pressed", String(read("dea-web") !== "0"));
   $("h-web").addEventListener("click", function () {

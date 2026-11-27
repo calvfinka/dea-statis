@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,640;1,9..144,560&family=Outfit:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
   <script>
     (function () {
       try {
@@ -217,6 +217,7 @@
       <div class="dock">
         <form class="composer" id="chat-form">
           <label class="sr" for="chat-input">Pesan untuk Dea</label>
+          <button type="button" class="icon-btn" id="c-plus" aria-label="Tambah lampiran"><svg class="lu"><use href="#l-plus"/></svg></button>
           <textarea id="chat-input" rows="1" placeholder="Tulis pesan…"></textarea>
           <button type="button" class="icon-btn" data-voice aria-label="Mode suara"><span class="i-mic"></span></button>
           <button type="submit" class="send" aria-label="Kirim"><span class="i-send"></span></button>
@@ -287,10 +288,11 @@
       </div>
     </div>
   </div>
-  <script src="js/auth.js?v=5"></script>
-  <script src="js/chatlog.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
-  <script src="js/home.js?v=5"></script>
-  <script src="js/thread.js?v=5"></script>
+  <script src="js/auth.js?v=7"></script>
+  <script src="js/chatlog.js?v=7"></script>
+  <script src="js/attach.js?v=7"></script>
+  <script src="js/app.js?v=7"></script>
+  <script src="js/home.js?v=7"></script>
+  <script src="js/thread.js?v=7"></script>
 </body>
 </html>

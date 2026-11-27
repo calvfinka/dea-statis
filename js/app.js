@@ -119,7 +119,7 @@
   }
 
   /* Balasan dari Worker `dme-ai`. "" = pakai otak lokal. Login = kirim token supaya jatah dihitung per akun. */
-  async function remoteReply(history, onChunk, onSources) {
+  async function remoteReply(history, onChunk, onSources, files) {
     if (location.hostname !== "ai.gowithdme.com") return "";
     const message = history[history.length - 1].content;
     const ctrl = new AbortController();
@@ -137,6 +137,7 @@
           mode: state.mode,
           history: history.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content })),
           stream: true,
+          attachments: files && files.length ? files : undefined,
           web: !($("h-web") && $("h-web").getAttribute("aria-pressed") === "false"),
           user_id: userId(),
         }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId, state.persona) : {})),
@@ -144,7 +145,7 @@
       });
       if (!res.ok) {
         // 429 (jatah/menit) dan 400 (pesan terlalu panjang) membawa pesan ramah dari Worker
-        if (res.status === 429 || res.status === 400) {
+        if (res.status === 429 || res.status === 400 || res.status === 413) {
           try { const d = await res.json(); if (d && d.message) return String(d.message); } catch (e) {}
         }
         return "";
@@ -489,7 +490,9 @@
     const chat = active();
     chat.persona = state.persona;
     chat.mode = state.mode;
-    const userMsg = { id: uid(), role: "user", content: text.slice(0, 2000), at: Date.now() };
+    const files = window.DeaAttach ? window.DeaAttach.take() : [];
+    const note = files.length ? "\n[Lampiran: " + files.map((f) => f.name.replace(/[\[\]]/g, "")).join(", ") + "]" : "";
+    const userMsg = { id: uid(), role: "user", content: text.slice(0, 2000 - note.length) + note, at: Date.now() };
     chat.msgs.push(userMsg);
     if (chat.title === "Obrolan baru") chat.title = text.replace(/\s+/g, " ").slice(0, 42);
     cloudSave(chat, userMsg);
@@ -514,7 +517,8 @@
       return true;
     };
     try {
-      answer = (await remoteReply(history, onChunk, (s) => { src = s; })) || localReply(state.persona, state.mode, history);
+      answer = (await remoteReply(history, onChunk, (s) => { src = s; }, files)) ||
+        (files.length ? "Lampirannya gagal diproses. Coba kirim ulang ya." : localReply(state.persona, state.mode, history));
     } catch (e) {
       answer = localReply(state.persona, state.mode, history);
     }
