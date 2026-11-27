@@ -19,7 +19,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,640;1,9..144,560&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,640;1,9..144,560&family=Outfit:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script>
     (function () {
@@ -32,93 +32,133 @@
   </script>
 </head>
 <body>
-  <div id="home">
-    <header class="top">
-      <a class="brand" href="#atas">
-        <span class="logo" aria-hidden="true"></span>
-        <span><strong>Dea</strong><small>GoWithDME</small></span>
-      </a>
-      <nav class="nav">
-        <a href="#suasana">Suasana</a>
-        <a href="#mode">Mode</a>
-        <a href="#fitur">Fitur</a>
-      </nav>
-      <div class="top-actions">
-        <button type="button" class="icon-btn" id="theme-home" aria-label="Mode gelap">
-          <span class="i-moon" aria-hidden="true"></span>
-          <span class="i-sun" aria-hidden="true"></span>
-        </button>
-        <button type="button" class="btn btn-ghost" data-auth>Masuk</button>
-        <button type="button" class="btn btn-mint" data-open-chat>Ngobrol</button>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="dea-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient>
+      <symbol id="l-panel" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></symbol>
+      <symbol id="l-pen" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol>
+      <symbol id="l-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></symbol>
+      <symbol id="l-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></symbol>
+      <symbol id="l-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+      <symbol id="l-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+      <symbol id="l-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+      <symbol id="l-spark" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></symbol>
+      <symbol id="l-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+      <symbol id="l-mic" viewBox="0 0 24 24"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></symbol>
+      <symbol id="l-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="l-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="l-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></symbol>
+      <symbol id="l-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+      <symbol id="l-menu" viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></symbol>
+      <symbol id="l-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+      <symbol id="l-code" viewBox="0 0 24 24"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></symbol>
+      <symbol id="l-phone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+      <symbol id="l-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+      <symbol id="l-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+      <symbol id="l-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+      <symbol id="l-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+      <symbol id="l-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+      <symbol id="l-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol>
+      <symbol id="l-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+      <symbol id="l-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol>
+      <symbol id="l-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="l-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    </defs>
+  </svg>
+
+  <div id="home" class="h-app">
+    <aside class="h-side" id="h-side" aria-label="Menu Dea">
+      <div class="h-side-top">
+        <a class="h-brand" href="#" aria-label="Dea AI">
+          <svg class="h-logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="url(#dea-grad)"/><path fill="#fff" fill-rule="evenodd" d="M9 7h6.2a9 9 0 0 1 0 18H9Zm4 4v10h2.2a5 5 0 0 0 0-10Z"/><path fill="#fff" d="M24.6 5.2c.3 1.6.8 2.1 2.4 2.4-1.6.3-2.1.8-2.4 2.4-.3-1.6-.8-2.1-2.4-2.4 1.6-.3 2.1-.8 2.4-2.4Z"/></svg>
+          <span>Dea</span>
+        </a>
+        <button type="button" class="h-ico" id="h-collapse" aria-label="Tutup sidebar"><svg class="lu"><use href="#l-panel"/></svg></button>
       </div>
-    </header>
-
-    <main id="atas">
-      <section class="hero">
-        <div>
-          <p class="kicker">Teman AI · bukan chatbot kaku</p>
-          <h1>Hari yang berantakan, <em>Dea dengerin.</em></h1>
-          <p class="lede">Curhat, beresin tugas, atau susun rencana gunung, konser, dan trip. Hangat kayak bestie, tetap sopan. Riwayatnya tinggal di perangkat kamu, atau di akunmu kalau kamu masuk.</p>
-          <div class="cta-row">
-            <button type="button" class="btn btn-ink" data-open-chat>Mulai percakapan</button>
-            <button type="button" class="btn btn-ghost" id="open-voice">Coba suaranya</button>
-          </div>
-          <p class="fine">Tanpa akun. Buka file ini, langsung jalan.</p>
+      <nav class="h-menu">
+        <button type="button" class="h-item h-new" id="h-newchat"><svg class="lu"><use href="#l-pen"/></svg><span>New Chat</span><kbd>Ctrl I</kbd></button>
+        <a class="h-item" href="https://gowithdme.com" target="_blank" rel="noopener"><svg class="lu"><use href="#l-radio"/></svg><span>Live Event</span></a>
+        <button type="button" class="h-item" id="h-more" aria-expanded="false" aria-controls="h-more-list"><svg class="lu"><use href="#l-grid"/></svg><span>More</span><svg class="lu h-chev"><use href="#l-down"/></svg></button>
+        <div class="h-sub" id="h-more-list" hidden>
+          <button type="button" class="h-item sm" id="h-more-voice"><svg class="lu"><use href="#l-mic"/></svg><span>Ngobrol suara</span></button>
+          <button type="button" class="h-item sm" id="h-more-theme"><svg class="lu"><use href="#l-moon"/></svg><span>Gelap / terang</span></button>
         </div>
-        <div class="panel" aria-label="Demo ngobrol dengan Dea">
-          <div class="panel-head">
-            <span class="logo" aria-hidden="true"></span>
-            <div>
-              <strong>Dea sedang online</strong>
-              <small id="demo-meta">Ceria · Ngobrol</small>
+        <p class="h-label"><svg class="lu"><use href="#l-history"/></svg><span>History</span></p>
+        <div class="h-hist" id="h-hist"></div>
+      </nav>
+      <div class="h-side-foot">
+        <div class="h-me"><span class="h-avatar"><svg class="lu"><use href="#l-user"/></svg></span><span class="h-me-name" id="h-me-name">Tamu</span></div>
+        <button type="button" class="h-ico" id="theme-home" aria-label="Mode gelap"><svg class="lu i-m"><use href="#l-moon"/></svg><svg class="lu i-s"><use href="#l-sun"/></svg></button>
+        <button type="button" class="h-ico" id="h-settings" aria-label="Pengaturan"><svg class="lu"><use href="#l-sliders"/></svg></button>
+      </div>
+    </aside>
+    <div class="h-scrim" id="h-scrim" hidden></div>
+
+    <div class="h-main">
+      <header class="h-top">
+        <button type="button" class="h-ico" id="h-open" aria-label="Buka menu"><svg class="lu"><use href="#l-menu"/></svg></button>
+        <div class="h-top-r">
+          <a class="h-pill" href="https://gowithdme.com" target="_blank" rel="noopener"><svg class="lu"><use href="#l-code"/></svg>API</a>
+          <a class="h-pill h-hide-sm" href="https://gowithdme.com" target="_blank" rel="noopener"><svg class="lu"><use href="#l-phone"/></svg>App</a>
+          <a class="h-pill h-dark" href="https://gowithdme.com" target="_blank" rel="noopener"><svg class="lu"><use href="#l-zap"/></svg>Upgrade</a>
+          <span class="h-pill h-login"><button type="button" data-auth>Login</button><span class="h-avatar sm"><svg class="lu"><use href="#l-user"/></svg></span></span>
+        </div>
+      </header>
+
+      <main class="h-center" id="atas">
+        <h1 class="h-title">Hai, aku Dea</h1>
+        <p class="h-sub-title">Semua jawaban. Semua teman jalan. Dalam satu tempat.</p>
+        <button type="button" class="h-badge" id="h-agent"><svg class="lu"><use href="#l-spark"/></svg><b>Dea Agent</b><span>Smarter AI Teman Jalan</span><svg class="lu"><use href="#l-right"/></svg></button>
+
+        <form class="h-box" id="demo-form" autocomplete="off">
+          <label class="sr" for="demo-input">Pesan untuk Dea</label>
+          <textarea id="demo-input" rows="2" placeholder="Tanya apa aja ke Dea..."></textarea>
+          <div class="h-bar">
+            <div class="h-bar-l">
+              <button type="button" class="h-round" id="h-plus" aria-label="Tambah lampiran"><svg class="lu"><use href="#l-plus"/></svg></button>
+              <button type="button" class="h-tool" id="h-create"><svg class="lu"><use href="#l-spark"/></svg>Create</button>
+              <button type="button" class="h-tool icon" id="h-web" aria-pressed="true" aria-label="Cari di web"><svg class="lu"><use href="#l-globe"/></svg></button>
             </div>
-            <span class="dot" aria-hidden="true"></span>
+            <div class="h-bar-r">
+              <button type="button" class="h-round plain" id="open-voice" aria-label="Mode suara"><svg class="lu"><use href="#l-mic"/></svg></button>
+              <span class="h-pro-l">Pro</span>
+              <button type="button" class="h-switch" id="h-pro" role="switch" aria-checked="false" aria-label="Mode Pro"><i></i></button>
+              <button type="submit" class="h-send" aria-label="Kirim"><svg class="lu"><use href="#l-up"/></svg></button>
+            </div>
           </div>
-          <div class="log" id="demo-log" aria-live="polite"></div>
-          <form class="composer" id="demo-form">
-            <label class="sr" for="demo-input">Pesan untuk Dea</label>
-            <textarea id="demo-input" rows="1" placeholder="Curhat aja, Dea dengerin…"></textarea>
-            <button type="button" class="icon-btn" data-voice aria-label="Mode suara"><span class="i-mic"></span></button>
-            <button type="submit" class="send" aria-label="Kirim"><span class="i-send"></span></button>
-          </form>
-          <div class="chips" id="demo-chips"></div>
-        </div>
-      </section>
+        </form>
+        <div class="h-hint" id="h-hint"><span>💡 Dea bisa bantu cari konser &amp; teman jalan</span><button type="button" id="h-hint-x" aria-label="Tutup"><svg class="lu"><use href="#l-x"/></svg></button></div>
 
-      <section class="band" id="suasana">
-        <div class="wrap">
-          <h2>Pilih suasananya.</h2>
-          <p class="sub">Dea yang sama, tiga cara nemenin. Bukan karakter yang tiba-tiba kasar.</p>
-          <div class="picks" id="persona-picks" role="radiogroup" aria-label="Suasana Dea"></div>
-          <p class="quote" id="persona-quote"></p>
+        <div class="h-chips" id="h-chips">
+          <button type="button" class="h-chip" data-mode="konser" data-q="Cariin konser yang lagi ada bulan ini dong"><svg class="lu"><use href="#l-music"/></svg>Cari Konser</button>
+          <button type="button" class="h-chip" data-mode="trip" data-q="Bikinin itinerary trip 3 hari 2 malam dong"><svg class="lu"><use href="#l-map"/></svg>Buat Itinerary<em class="hot">Hot</em></button>
+          <button type="button" class="h-chip" data-mode="konser" data-q="Cariin teman jalan buat nonton konser bareng dong"><svg class="lu"><use href="#l-users"/></svg>Cari Teman Jalan<em class="new">New</em></button>
+          <button type="button" class="h-chip" data-mode="gunung" data-q="Rencanain hiking buat pemula, 2 hari 1 malam"><svg class="lu"><use href="#l-mountain"/></svg>Rencana Hiking<em class="new">New</em></button>
+          <button type="button" class="h-chip" data-mode="ngobrol" data-q="Tolong riset mendalam tentang "><svg class="lu"><use href="#l-search"/></svg>Deep Research</button>
+          <button type="button" class="h-chip icon" id="h-chip-more" aria-expanded="false" aria-label="Lainnya"><svg class="lu"><use href="#l-dots"/></svg></button>
+          <span class="h-chip-extra" id="h-chip-extra" hidden>
+            <button type="button" class="h-chip" data-mode="ngobrol" data-q="Aku mau curhat dong, lagi capek banget"><svg class="lu"><use href="#l-heart"/></svg>Curhat</button>
+            <button type="button" class="h-chip" data-mode="trip" data-q="Hitungin patungan trip buat 4 orang"><svg class="lu"><use href="#l-users"/></svg>Hitung Patungan</button>
+          </span>
         </div>
-      </section>
+      </main>
 
-      <section class="band alt" id="mode">
-        <div class="wrap">
-          <h2>Empat pintu, satu Dea.</h2>
-          <p class="sub">Ngobrol bebas, atau langsung ke urusan gunung, konser, dan trip.</p>
-          <div class="pills" id="mode-pills" role="radiogroup" aria-label="Mode"></div>
-          <div class="cards" id="mode-cards"></div>
-        </div>
-      </section>
+      <footer class="h-foot">
+        <p>&copy; 2026 GoWithDME</p>
+        <p class="h-foot-links"><span>Enterprise</span><span>Blog</span><span>Tools</span><span>Live Event</span><span>Agent</span><span>LLM Playground</span><span>API</span><span>SEO automation</span><span>Slides</span><span>AI Video</span><a href="https://gowithdme.com/privacy" target="_blank" rel="noopener">Privacy</a><a href="https://gowithdme.com/terms" target="_blank" rel="noopener">Terms</a><span>Indonesia</span></p>
+      </footer>
+    </div>
 
-      <section class="band" id="fitur">
-        <div class="wrap">
-          <h2>Yang kerasa di tangan.</h2>
-          <div class="features">
-            <article><h3>Gelap atau terang</h3><p>Ikut mood. Pilihan tersimpan di perangkat ini.</p></article>
-            <article><h3>Ngobrol pakai suara</h3><p>Tekan mic, bicara, Dea menjawab lalu membacakannya. Butuh Chrome atau Edge.</p></article>
-            <article><h3>Riwayat yang nempel</h3><p>Percakapan tinggal di browser. Hapus satu utas kapan saja.</p></article>
-            <article><h3>Tiga suasana</h3><p>Ceria, galak, atau manja. Nada berubah, sopan santunnya tidak.</p></article>
-          </div>
-        </div>
-      </section>
-    </main>
-    <footer class="foot">
-      <p>Dea · GoWithDME. Teman ngobrol, bukan pengganti bantuan profesional.</p>
-      <p>Ceria, galak, manja. Tetap sopan.</p>
-    </footer>
+    <!-- elemen lama yang masih dipakai js/app.js; disembunyikan, jangan dihapus -->
+    <div class="h-compat" hidden aria-hidden="true">
+      <span id="demo-meta"></span>
+      <p id="persona-quote"></p>
+      <div id="demo-log"></div>
+      <div id="persona-picks"></div>
+      <div id="mode-pills"></div>
+      <div id="mode-cards"></div>
+      <div id="demo-chips"></div>
+    </div>
   </div>
 
   <div id="studio" hidden>
@@ -225,5 +265,6 @@
   <script src="js/auth.js"></script>
   <script src="js/chatlog.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/home.js"></script>
 </body>
 </html>
