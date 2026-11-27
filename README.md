@@ -1,36 +1,64 @@
 # Dea AI — GoWithDME
 
-Asisten ngobrol Dea di **https://ai.gowithdme.com**. Situs statis tanpa build (tidak perlu `npm install`), login lewat Supabase, otaknya di Cloudflare Worker `dme-ai`.
+Asisten Dea di **https://ai.gowithdme.com**: chat, jawaban bersumber, Deep Research, tab gambar/video, lampiran, dan slide. Situs statis tanpa `npm install`.
+
+## Alur deploy
+
+`git push` ke `main` otomatis memperbarui dua hal:
+
+| Bagian | Layanan Cloudflare | Isi |
+|---|---|---|
+| Tampilan | Pages `dea-web` | `index.html`, `css/`, `js/*.js`, `assets/` |
+| Otak Dea | Worker `dme-ai` | `worker/` |
+
+Build command `dea-web` (output `dist`):
+
+```
+mkdir -p dist/css dist/js && cp index.html dist/ && cp css/style.css dist/css/ && cp js/*.js dist/js/ && cp -r assets dist/
+```
+
+GitHub Pages sudah dimatikan. DNS: CNAME `ai` -> `dea-web.pages.dev`. Setiap mengubah CSS/JS, naikkan `?v=N` di `index.html`.
 
 ## Isi repo
 
 ```
-index.html  css/style.css  assets/  CNAME  .nojekyll      situs (GitHub Pages)
-js/app.js        antarmuka chat, kirim pesan ke Worker, riwayat lokal
-js/auth.js       login Supabase + riwayat di akun (ai_chats, ai_messages)
-js/chatlog.js    persetujuan + saklar "Catat obrolan saya"
-prompt/          teks system prompt Dea
-worker/          kode Worker Cloudflare `dme-ai` (lihat di bawah)
-supabase/        SQL tabel + edge function (export-training, training-complete)
-docs/            PEMBELAJARAN.md, PERUBAHAN_SUPABASE.md
+index.html  css/style.css  assets/
+js/app.js        chat, kirim ke Worker, riwayat lokal
+js/auth.js       login Supabase + riwayat di akun
+js/home.js       halaman awal
+js/thread.js     tampilan jawaban, kartu sumber, tab Image/Video, slide
+js/attach.js     tombol + (foto, PDF, teks)
+js/chatlog.js    persetujuan pencatatan obrolan
+worker/          Worker `dme-ai`
+supabase/        SQL + edge function
 tests/           chatlog.test.mjs
-PATCH-GROK.md    catatan pindah model utama ke Grok
 ```
 
-Berkas `*.bak-chatlog` hanya salinan cadangan dari pemasangan pencatat chat. Boleh dihapus.
+## Fitur
 
-## Yang tersambung
+| Fitur | Catatan |
+|---|---|
+| Kartu sumber + sitasi [n] | butuh `TAVILY_API_KEY` atau `SERPER_API_KEY` |
+| Tombol globe | mati = tanpa pencarian web |
+| Deep Research | 3 pencarian, membaca cuplikan (bukan halaman penuh) |
+| Tab Image / Video | filter aman hanya dipasang untuk Serper |
+| Lampiran | maks 4; PDF 4 MB, teks 200 KB, foto diperkecil otomatis |
+| Slide | disusun di perangkat; simpan PDF atau HTML |
 
-- **Login Supabase**: proyek yang sama dengan gowithdme.com (Google, Facebook, Discord, GitHub, email + password, link masuk, lupa password). Daftar akun baru tetap di gowithdme.com.
-- **Worker `dme-ai`**: pesan dikirim ke `https://dme-ai.calvfinka.workers.dev`. Bila login, header `Authorization: Bearer <token>` ikut terkirim, jadi jatah dan memori Dea dihitung per akun. Tamu tetap bisa chat dengan jatah lebih kecil. Bila Worker gagal, Dea menjawab dari otak lokal.
-- **Model**: Grok (xAI) sebagai utama, lalu Gemini, lalu Groq sebagai cadangan bila yang di depannya gagal. Detail di `PATCH-GROK.md`.
-- **Riwayat di akun**: tabel `ai_chats` + `ai_messages`. Tamu hanya di localStorage. Saat keluar, chat milik akun dihapus dari perangkat.
-- **Panel admin**: admin.gowithdme.com > AI (Dea) membaca angka pemakaian, ulasan jawaban, dan (bila pengguna setuju) isi percakapan.
+## Batas pemakaian (`worker/guard.js`)
+
+| | Tamu (publik) | Login (user) |
+|---|---|---|
+| Jatah per hari (reset 00.00 WIB) | 40 | 200 |
+| Permintaan per menit | 10 | 20 |
+
+Biaya: chat 1, buka tab Image/Video 1, Deep Research 3, foto/PDF 3. Tamu dihitung per alamat IP, user per akun.
+Ubah lewat `QUOTA_GUEST`, `QUOTA_USER`, `BURST_GUEST`, `BURST_USER` di `worker/wrangler.toml` (hapus tanda `#`), lalu push.
 
 ## Setup sekali
 
 1. Supabase > Authentication > URL Configuration > Redirect URLs: tambahkan `https://ai.gowithdme.com/**`. Site URL tetap `https://gowithdme.com`.
-2. GitHub Pages: Settings > Pages > Deploy from a branch > `main` / root.
+2. Cloudflare Pages `dea-web` tersambung ke repo ini (lihat Alur deploy).
 3. Jalankan SQL di Supabase > SQL Editor, **berurutan** (semuanya aman diulang):
 
 | Urutan | Berkas | Untuk |
@@ -41,6 +69,7 @@ Berkas `*.bak-chatlog` hanya salinan cadangan dari pemasangan pencatat chat. Bol
 | 4 | `supabase/admin_ai.sql` | angka pemakaian untuk panel admin (butuh `schema_rbac.sql` dari repo situs utama) |
 | 5 | `supabase/places.sql` (+ `places_seed.sql`) | data tempat untuk Dea |
 | 6 | `supabase/admin_ai_chat.sql` **dari repo admin** | tabel dan fungsi tab Percakapan |
+| 7 | `supabase/sumber.sql` | kolom `sources` supaya kartu sumber tersimpan di akun |
 
 `supabase/cek_trigger.sql` hanya untuk memeriksa bahwa pendaftaran pengguna baru di situs utama tidak rusak (hasil `versi_utama = true` berarti aman). `migrasi_ai_tabel.sql` hanya bila perlu menyalin riwayat dari tabel lama.
 
@@ -78,6 +107,8 @@ Cek hidup: `https://dme-ai.calvfinka.workers.dev/health` (hanya menampilkan ada/
 |---|---|
 | `worker.js` | pintu masuk, merangkai jawaban, urutan model |
 | `chatlog.js` | pencatat percakapan untuk panel admin (lihat bawah) |
+| `research.js` | Deep Research |
+| `media.js` | tab Image / Video |
 | `guard.js` | jatah dan batas kecepatan per akun/tamu (Durable Object `Limiter`) |
 | `usage.js` | catatan pemakaian anonim (`ai_usage`), pseudonim perangkat |
 | `memory.js` | memori per akun |
