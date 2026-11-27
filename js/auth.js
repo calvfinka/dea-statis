@@ -145,6 +145,17 @@
       return sb.auth.signOut({ scope: "local" }).then(function (r) { return { error: r.error ? friendly(r.error) : null }; });
     });
   };
+  A.signUp = function (email, pass, nama) {
+    if (!validEmail(email)) return Promise.resolve({ error: "Isi email yang valid dahulu." });
+    if (String(pass || "").length < 8) return Promise.resolve({ error: "Password minimal 8 karakter." });
+    return withClient(function (sb) {
+      return sb.auth.signUp({
+        email: String(email).trim(),
+        password: pass,
+        options: { emailRedirectTo: home(), data: { full_name: String(nama || "").trim() } }
+      }).then(function (r) { return { error: r.error ? friendly(r.error) : null }; });
+    });
+  };
 
   /* Token untuk header Authorization ke Worker (jatah per akun). Tamu: null tanpa mengunduh apa pun. Maks. tunggu 3 dtk. */
   A.token = function () {
@@ -172,6 +183,8 @@
 
   /* ---------- riwayat di Supabase (tabel ai_chats + ai_messages; hanya pengguna login) ---------- */
   var queue = Promise.resolve();
+  var lastUserText = "";
+  var blockCache = { t: 0, v: false };
   function enqueue(fn) { queue = queue.then(fn).catch(function () {}); }
   function authed() {
     return client().then(function (sb) {
@@ -179,6 +192,24 @@
       return sb;
     });
   }
+  function touchUser(sb) {
+    return sb.rpc("dea_touch_user").then(function (r) {
+      if (r && r.data && r.data.blocked) blockCache = { t: Date.now(), v: true };
+      return r;
+    }).catch(function () {});
+  }
+  A.blocked = function () {
+    if (!A.user) return Promise.resolve(false);
+    if (Date.now() - blockCache.t < 15000) return Promise.resolve(blockCache.v);
+    return authed().then(function (sb) {
+      if (!sb) return false;
+      return sb.rpc("dea_am_i_blocked").then(function (r) {
+        if (r.error) return false;
+        blockCache = { t: Date.now(), v: r.data === true };
+        return blockCache.v;
+      });
+    }).catch(function () { return false; });
+  };
   A.cloud = {
     list: function () {
       return authed().then(function (sb) {
@@ -215,7 +246,15 @@
       enqueue(function () {
         return authed().then(function (sb) {
           if (!sb) return;
-          return sb.from("ai_messages").insert({ id: m.id, chat_id: chatId, role: m.role === "user" ? "user" : "assistant", content: String(m.content).slice(0, 8000) });
+          var text = String(m.content || "").slice(0, 8000);
+          var writes = [sb.from("ai_messages").insert({ id: m.id, chat_id: chatId, role: m.role === "user" ? "user" : "assistant", content: text })];
+          if (m.role === "user") lastUserText = text.slice(0, 4000);
+          else if (lastUserText) {
+            var prompt = lastUserText;
+            lastUserText = "";
+            writes.push(sb.rpc("dea_log_chat", { p_message: prompt, p_reply: text.slice(0, 4000) }));
+          }
+          return Promise.all(writes);
         });
       });
     },
@@ -300,6 +339,31 @@
       grid.appendChild(b);
     });
 
+    var modeAuth = "in";
+    var nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.id = "login-nama";
+    nameInput.placeholder = "Nama";
+    nameInput.setAttribute("autocomplete", "name");
+    nameInput.hidden = true;
+    var form = $("login-form");
+    if (form) form.insertBefore(nameInput, form.firstChild);
+    var daftarBtn = document.createElement("button");
+    daftarBtn.type = "button";
+    daftarBtn.className = "btn btn-ghost";
+    daftarBtn.id = "login-daftar";
+    daftarBtn.textContent = "Daftar";
+    var fine = box.querySelector("#login-main .fine");
+    if (fine) fine.parentNode.insertBefore(daftarBtn, fine);
+    daftarBtn.addEventListener("click", function () {
+      modeAuth = modeAuth === "up" ? "in" : "up";
+      nameInput.hidden = modeAuth !== "up";
+      daftarBtn.textContent = modeAuth === "up" ? "Sudah punya akun? Masuk" : "Daftar";
+      var submit = form && form.querySelector('button[type="submit"]');
+      if (submit) submit.textContent = modeAuth === "up" ? "Buat akun" : "Masuk";
+      say("");
+    });
+
     function run(fn, okText) {
       setBusy(true); say("");
       return fn().then(function (r) {
@@ -312,6 +376,10 @@
       e.preventDefault();
       var em = $("login-email").value, pw = $("login-pass").value;
       if (!em.trim() || !pw) return say("Isi email dan password.");
+      if (modeAuth === "up") {
+        run(function () { return A.signUp(em, pw, nameInput.value); }, "Akun dibuat. Kalau ada email konfirmasi, buka dulu lalu masuk.");
+        return;
+      }
       run(function () { return A.signIn(em, pw); }); // berhasil: SIGNED_IN menutup lembar ini
     });
     $("login-forgot").addEventListener("click", function () {
@@ -334,6 +402,10 @@
 
     A.onChange(function (event) {
       paintButtons();
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && A.user) {
+        blockCache = { t: 0, v: false };
+        authed().then(function (sb) { if (sb) return touchUser(sb); });
+      }
       if (event === "SIGNED_IN" && !box.hidden && view === "login") close();
       if (event === "SIGNED_OUT" && !box.hidden && view === "akun") close();
       if (event === "PASSWORD_RECOVERY") open("recovery");
