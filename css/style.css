@@ -708,3 +708,13 @@ sup.cite {
 .deck-bar { display: flex; gap: 8px; justify-content: flex-end; max-width: 960px; margin: 0 auto 12px; }
 .deck-bar .a-btn { background: #fff; color: #18181b; }
 .deck-list { display: grid; gap: 12px; max-width: 960px; margin: 0 auto; }
+
+/* tab Image / Video */
+.t-media { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; padding: 4px 0 14px; color: var(--hm); font-size: 13px; }
+.t-media.video { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.t-media a { color: inherit; text-decoration: none; min-width: 0; }
+.t-media img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--hs); }
+.t-media.video img { aspect-ratio: 16/9; }
+.t-media span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 4px; font-size: 12px; }
+.t-tabs[data-tab="image"] .t-cards, .t-tabs[data-tab="video"] .t-cards { display: none; }
+.msg[hidden], .t-actions[hidden] { display: none !important; }

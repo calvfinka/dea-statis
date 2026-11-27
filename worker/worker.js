@@ -19,6 +19,7 @@ import { placesFor, PLACES_FALLBACK_URL } from './places.js';
 import { siteFor } from './site.js';
 import { searchInternet, searchContext, sourceMark, buildSearchQuery, providerOf } from './search.js';
 import { researchTopic, researchSearch, RESEARCH_NOTE, RESEARCH_COST } from './research.js';
+import { searchMedia } from './media.js';
 import { browseTop, pagesContext, browseEnabled } from './browse.js';
 import { loadMemory, memoryLayer, bearer as memBearer } from './memory.js';
 import { logUsage, purgeUsage, purgeTraining, topicOf, deviceOf, estTokens } from './usage.js';
@@ -947,6 +948,17 @@ const deaCore = {
     } catch (e) { return json({ code: 'bad', message: 'Permintaan tidak valid.' }, 400, origin); }
     /* Suara: body { voice:true, text } — bukan chat. Fungsi fetch chat di klien tidak diubah. */
     if (data && data.voice === true) return grokSpeak(env, data.text, origin);
+    /* Tab Image / Video: bukan chat, tidak memanggil model. Memakai 1 jatah pesan. */
+    if (data && (data.media === 'image' || data.media === 'video')) {
+      const asked = typeof data.q === 'string' ? data.q.slice(0, 500).trim() : '';
+      if (!asked) return json({ code: 'bad', message: 'Pertanyaan kosong.' }, 400, origin);
+      const turn = [{ role: 'user', content: asked }];
+      const used = await charge(env, await identify(request, env), 1);
+      if (!used.ok) return json({ code: used.reason, message: 'Jatah kamu lagi habis, coba lagi nanti ya.' }, 429, origin, quotaHeaders(used));
+      const found = await searchMedia(data.media, researchTopic(turn) || buildSearchQuery(turn, wibToday()), env);
+      if (!found) return json({ code: 'media', message: 'Pencarian lagi gangguan, coba lagi ya.' }, 502, origin, quotaHeaders(used));
+      return json({ items: found }, 200, origin, quotaHeaders(used));
+    }
     const mode = data && data.mode === 'search' ? 'search' : (data && typeof data.mode === 'string' && Object.prototype.hasOwnProperty.call(PROMPTS, data.mode) ? data.mode : DEFAULT_MODE);
     const isNgobrol = mode === 'ngobrol';
     const longLen = tooLong(data && data.history);

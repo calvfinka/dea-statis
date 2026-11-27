@@ -99,6 +99,7 @@
     "body>*:not(.deck){display:none!important}.deck{position:static!important;overflow:visible!important;padding:0!important;background:#fff!important}.deck-bar{display:none!important}" +
     ".deck-list{max-width:none!important;display:block!important}.deck-page{width:297mm;height:166mm;border-radius:0;break-after:page}.deck-page:last-child{break-after:auto}}";
   function openDeck(ans, q) {
+    q = String(q).replace(/^\s*(?:(?:dea|tolong)[\s,]+)*(?:riset mendalam|deep research)(?:\s+(?:tentang|soal|mengenai))?[\s:,-]*/i, "") || q;
     var b = ans && ans.querySelector(".bubble"); if (!b) return;
     var old = document.querySelector(".deck"); if (old) old.remove();
     var slides = slidesFrom(rawOf(b), q, sourcesOf(b));
@@ -144,19 +145,59 @@
   function buildTabs() {
     var d = document.createElement("div"); d.className = "t-tabs";
     d.innerHTML = '<div class="t-row"><div class="t-list" role="tablist">' +
-      '<button type="button" class="on" role="tab" aria-selected="true">' + ICON("spark") + 'Answer</button>' +
-      '<button type="button" role="tab" aria-selected="false" data-soon="Image">' + ICON("image") + 'Image</button>' +
-      '<button type="button" role="tab" aria-selected="false" data-soon="Video">' + ICON("video") + 'Video</button>' +
+      '<button type="button" class="on" role="tab" data-tab="answer" aria-selected="true">' + ICON("spark") + 'Answer</button>' +
+      '<button type="button" role="tab" aria-selected="false" data-tab="image">' + ICON("image") + 'Image</button>' +
+      '<button type="button" role="tab" aria-selected="false" data-tab="video">' + ICON("video") + 'Video</button>' +
       '</div><button type="button" class="t-src" aria-expanded="false"><span>Source &amp; Thinking</span>' + ICON("right") + '</button></div>' +
       '<div class="t-panel" hidden></div>';
-    d.querySelectorAll("[data-soon]").forEach(function (b) {
-      b.addEventListener("click", function () { toast("Tab " + b.getAttribute("data-soon") + " segera hadir."); });
+    d.querySelectorAll(".t-list button").forEach(function (b) {
+      b.addEventListener("click", function () { showTab(d, b.getAttribute("data-tab")); });
     });
     var src = d.querySelector(".t-src"), panel = d.querySelector(".t-panel");
     src.addEventListener("click", function () {
       var open = panel.hidden; panel.hidden = !open; src.setAttribute("aria-expanded", String(open));
     });
     return d;
+  }
+  /* ---- tab Image / Video: diambil dari Worker saat tab dibuka, disimpan di memori ---- */
+  var mediaCache = {};
+  function loadMedia(type, q) {
+    var key = type + "|" + q;
+    if (mediaCache[key]) return mediaCache[key];
+    var auth = window.DeaAuth;
+    mediaCache[key] = Promise.resolve(auth ? auth.token() : null).then(function (token) {
+      var h = { "Content-Type": "application/json" };
+      if (token) h.Authorization = "Bearer " + token;
+      return fetch("https://dme-ai.calvfinka.workers.dev", { method: "POST", headers: h, body: JSON.stringify({ media: type, q: q }) });
+    }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok || !j.items) throw new Error(j.message || ""); return j.items; });
+    });
+    mediaCache[key].catch(function () { delete mediaCache[key]; });
+    return mediaCache[key];
+  }
+  function showTab(bar, type) {
+    bar.querySelectorAll(".t-list button").forEach(function (b) {
+      var on = b.getAttribute("data-tab") === type;
+      b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on));
+    });
+    var old = bar.querySelector(".t-media"); if (old) old.remove();
+    bar.dataset.tab = type;
+    for (var n = bar.nextElementSibling; n && !n.classList.contains("user"); n = n.nextElementSibling) n.hidden = type !== "answer";
+    if (type === "answer") return;
+    var box = node("div", "t-media " + type, "Sebentar, lagi dicari...");
+    bar.appendChild(box);
+    var u = bar.previousElementSibling, q = u && u.querySelector(".bubble") ? u.querySelector(".bubble").textContent : "";
+    loadMedia(type, q).then(function (items) {
+      box.textContent = items.length ? "" : "Belum ketemu " + (type === "image" ? "gambar" : "video") + " untuk pertanyaan ini.";
+      items.forEach(function (it) {
+        if (!/^https:/i.test(it.url) || !/^https:/i.test(it.thumb)) return;
+        var a = node("a"); a.href = it.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+        var img = new Image(); img.loading = "lazy"; img.referrerPolicy = "no-referrer"; img.alt = it.title || ""; img.src = it.thumb;
+        img.onerror = function () { a.remove(); };
+        a.appendChild(img); if (type === "video") a.appendChild(node("span", "", it.title));
+        box.appendChild(a);
+      });
+    }).catch(function (e) { box.textContent = e.message || "Gagal memuat. Ketuk tab lagi untuk mencoba."; });
   }
   function context(actions) {
     var ans = actions.previousElementSibling, bar = ans && ans.previousElementSibling, q = bar && bar.previousElementSibling;
