@@ -18,6 +18,7 @@ import { identify, charge, quotaHeaders, denyMessage, ipKey, MEDIA_COST } from '
 import { placesFor, PLACES_FALLBACK_URL } from './places.js';
 import { siteFor } from './site.js';
 import { searchInternet, searchContext, sourceMark, buildSearchQuery, providerOf } from './search.js';
+import { researchTopic, researchSearch, RESEARCH_NOTE, RESEARCH_COST } from './research.js';
 import { browseTop, pagesContext, browseEnabled } from './browse.js';
 import { loadMemory, memoryLayer, bearer as memBearer } from './memory.js';
 import { logUsage, purgeUsage, purgeTraining, topicOf, deviceOf, estTokens } from './usage.js';
@@ -964,7 +965,8 @@ const deaCore = {
     /* Identitas (akun login dari token Supabase, selain itu tamu) lalu potong jatah. Dilakukan setelah permintaan lolos validasi
        (permintaan rusak tidak memakan jatah) dan sebelum pekerjaan mahal (ambil data, panggil model). */
     const ident = await identify(request, env);
-    const quota = await charge(env, ident, hasImg || hasPdf ? MEDIA_COST : 1);
+    const topic = isNgobrol && data.web !== false && !items.length && providerOf(env) ? researchTopic(history, data.research) : '';
+    const quota = await charge(env, ident, hasImg || hasPdf ? MEDIA_COST : topic ? RESEARCH_COST : 1);
     if (!quota.ok) {
       return json({ code: quota.reason, message: denyMessage(quota, ident.kind), retryAfter: quota.retryAfter, limit: quota.limit, remaining: quota.remaining },
         429, origin, Object.assign({ 'Retry-After': String(quota.retryAfter) }, quotaHeaders(quota)));
@@ -1015,7 +1017,8 @@ const deaCore = {
     if (isNgobrol) { const memText = await memoryLayer({ env, request, ident, history, mind, memP, ctx, today }); if (memText) system += '\n\n' + memText; } // memori pengguna login (tamu: hanya catatan ajakan login)
     /* Mode Internet: hanya Dea, tanpa lampiran, dan hanya bila datanya tidak ada di data GWM / tempat. Mode Thinking: pertanyaan kompleks, mode internet, atau flag `thinking: true` dari klien. */
     if (isNgobrol && env.GEMINI_API_KEY && asksNetAbility(history)) system += '\n\n' + NET_ABILITY_NOTE;
-    const wantNet = isNgobrol && data.web !== false && !items.length && !!(providerOf(env) || env.GEMINI_API_KEY) && needsInternet(history, siteBlock, placeBlock, mind);
+    const research = !!topic && !mind.crisis;
+    const wantNet = research || isNgobrol && data.web !== false && !items.length && !!(providerOf(env) || env.GEMINI_API_KEY) && needsInternet(history, siteBlock, placeBlock, mind);
     const think = isNgobrol && (wantNet || !!mind.complex || cl.deep || (data && data.thinking === true));
     if (think) system += '\n\n' + thinkNote(history);
     const opts = { temp: Math.min(mind.temp, cl.tempCap), effort: think ? 'medium' : mind.effort, thinking: think ? Math.max(mind.thinking || 0, 1024) : mind.thinking, maxTokens: 4000 };
@@ -1109,9 +1112,9 @@ const deaCore = {
     let netSites = null, netMark = '';
     const tryInternet = async () => {
       if (!wantNet) return null;
-      const sr = await searchInternet(buildSearchQuery(history, today), env);
+      const sr = research ? await researchSearch(topic, env, today) : await searchInternet(buildSearchQuery(history, today), env);
       if (sr.ok) {
-        system += '\n\n' + searchContext(sr, today); netSites = sr.sites; netMark = sourceMark(sr);
+        system += '\n\n' + searchContext(sr, today) + (research ? '\n\n' + RESEARCH_NOTE : ''); netSites = sr.sites; netMark = sourceMark(sr);
         return null; // jangan tunggu browse halaman: itu menahan token pertama
       }
       if (env.GEMINI_API_KEY) {
