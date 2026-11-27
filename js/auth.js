@@ -225,11 +225,18 @@
     messages: function (chatId) {
       return authed().then(function (sb) {
         if (!sb) return null;
-        return sb.from("ai_messages").select("id, role, content, created_at").eq("chat_id", chatId)
-          .order("created_at", { ascending: false }).limit(100).then(function (r) {
+        function load(cols) {
+          return sb.from("ai_messages").select(cols).eq("chat_id", chatId).order("created_at", { ascending: false }).limit(100);
+        }
+        // kolom "sources" baru ada setelah supabase/sumber.sql dijalankan; sebelum itu, muat tanpa kolom tersebut
+        return load("id, role, content, created_at, sources")
+          .then(function (r) { return r.error ? load("id, role, content, created_at") : r; })
+          .then(function (r) {
             if (r.error || !r.data) return null;
             return r.data.reverse().map(function (m) {
-              return { id: m.id, role: m.role === "user" ? "user" : "dea", content: m.content, at: Date.parse(m.created_at) || Date.now() };
+              var out = { id: m.id, role: m.role === "user" ? "user" : "dea", content: m.content, at: Date.parse(m.created_at) || Date.now() };
+              if (Array.isArray(m.sources) && m.sources.length) out.src = m.sources;
+              return out;
             });
           });
       }).catch(function () { return null; });
@@ -247,7 +254,12 @@
         return authed().then(function (sb) {
           if (!sb) return;
           var text = String(m.content || "").slice(0, 8000);
-          var writes = [sb.from("ai_messages").insert({ id: m.id, chat_id: chatId, role: m.role === "user" ? "user" : "assistant", content: text })];
+          var row = { id: m.id, chat_id: chatId, role: m.role === "user" ? "user" : "assistant", content: text };
+          var withSrc = m.src && m.src.length;
+          var save = sb.from("ai_messages").insert(withSrc ? Object.assign({ sources: m.src.slice(0, 12) }, row) : row);
+          // kolom belum ada: simpan ulang tanpa sumber supaya pesannya tidak hilang
+          if (withSrc) save = save.then(function (r) { return r && r.error ? sb.from("ai_messages").insert(row) : r; });
+          var writes = [save];
           if (m.role === "user") lastUserText = text.slice(0, 4000);
           else if (lastUserText) {
             var prompt = lastUserText;
