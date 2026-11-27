@@ -45,6 +45,31 @@
     });
   }
 
+  /* ---- kartu sumber (data dari bubble.dataset.src) ---- */
+  function sourcesOf(b) {
+    try { return JSON.parse((b && b.dataset.src) || "[]"); } catch (e) { return []; }
+  }
+  function sourceCards(list) {
+    var box = document.createElement("div"); box.className = "t-cards";
+    list.forEach(function (s, i) {
+      if (!/^https?:\/\//i.test(s.u)) return;
+      var a = document.createElement("a"); a.className = "t-card"; a.href = s.u; a.target = "_blank"; a.rel = "noopener noreferrer";
+      var title = document.createElement("span"); title.textContent = s.t || s.u;
+      var site = document.createElement("small");
+      var host = s.u; try { host = new URL(s.u).hostname.replace(/^www\./, ""); } catch (e) {}
+      site.textContent = (i + 1) + " · " + host;
+      a.appendChild(title); a.appendChild(site); box.appendChild(a);
+    });
+    return box;
+  }
+  function paintSources(bar, list) {
+    var key = JSON.stringify(list), old = bar.querySelector(".t-cards");
+    if (old && old.dataset.key === key) return;
+    if (old) old.remove();
+    if (!list.length) return;
+    var box = sourceCards(list); box.dataset.key = key; bar.appendChild(box);
+  }
+
   /* ---- menu kecil ---- */
   function closeMenus() {
     document.querySelectorAll(".s-menu").forEach(function (m) { m.hidden = true; });
@@ -136,13 +161,18 @@
         var ans = bar.nextElementSibling;
         var isAns = ans && ans.classList.contains("msg") && !ans.classList.contains("user");
         var n = 0;
+        var list = isAns ? sourcesOf(ans.querySelector(".bubble")) : [];
+        paintSources(bar, list);
         if (isAns) {
           var seen = {};
           rawOf(ans.querySelector(".bubble")).replace(/\[(\d{1,2})\]/g, function (_, k) { seen[k] = 1; return ""; });
           n = Object.keys(seen).length;
         }
+        if (list.length) n = list.length;
         bar.querySelector(".t-src span").textContent = (n ? n + " " : "") + "Source & Thinking";
-        bar.querySelector(".t-panel").textContent = n
+        bar.querySelector(".t-panel").textContent = list.length
+          ? "Sumber dari pencarian web. Angka [n] di jawaban sesuai nomor kartu."
+          : n
           ? "Jawaban ini menandai " + n + " rujukan. Daftar tautan sumbernya belum tersedia di versi ini."
           : "Belum ada sumber yang dilampirkan di jawaban ini.";
         if (isAns && !ans.classList.contains("live")) {

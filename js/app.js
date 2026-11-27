@@ -119,7 +119,7 @@
   }
 
   /* Balasan dari Worker `dme-ai`. "" = pakai otak lokal. Login = kirim token supaya jatah dihitung per akun. */
-  async function remoteReply(history, onChunk) {
+  async function remoteReply(history, onChunk, onSources) {
     if (location.hostname !== "ai.gowithdme.com") return "";
     const message = history[history.length - 1].content;
     const ctrl = new AbortController();
@@ -137,6 +137,7 @@
           mode: state.mode,
           history: history.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content })),
           stream: true,
+          web: !($("h-web") && $("h-web").getAttribute("aria-pressed") === "false"),
           user_id: userId(),
         }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId, state.persona) : {})),
         signal: ctrl.signal,
@@ -159,13 +160,24 @@
         if (onChunk && onChunk(cleanReply(raw)) === false) { ctrl.abort(); return ""; }
       }
       raw += dec.decode();
+      if (onSources) onSources(readSources(raw));
       return cleanReply(raw);
     } catch (e) {
       // putus di tengah jalan: pakai teks yang sudah datang bila ada, kalau tidak, otak lokal
+      if (onSources) onSources(readSources(raw));
       return cleanReply(raw);
     } finally {
       clearTimeout(timer);
     }
+  }
+  /* Daftar sumber dari penanda <!--src:...--> milik Worker. Hanya tautan http(s). */
+  function readSources(raw) {
+    const m = /<!--src:([^>]*?)-->/.exec(raw);
+    if (!m) return [];
+    try {
+      // urutan dipertahankan supaya nomor kartu cocok dengan [n]
+      return JSON.parse(decodeURIComponent(m[1])).map((s) => ({ t: String((s && s.t) || ""), u: String((s && s.u) || "") }));
+    } catch (e) { return []; }
   }
   function userId() {
     try {
@@ -206,6 +218,7 @@
     const art = el("article", "msg" + (m.role === "user" ? " user" : ""));
     art.appendChild(el("p", "who", m.role === "user" ? "Kamu" : "Dea"));
     const bubble = el("p", "bubble", m.content);
+    if (m.src && m.src.length) bubble.dataset.src = JSON.stringify(m.src);
     if (m.role === "dea") {
       const name = el("div", "dea-name");
       name.appendChild(el("span", "logo"));
@@ -489,6 +502,7 @@
     render();
     const history = chat.msgs.slice(-8);
     let answer = "";
+    let src = [];
     liveText = "Dea lagi ngetik…";
     liveShown = true;
     render();
@@ -500,7 +514,7 @@
       return true;
     };
     try {
-      answer = (await remoteReply(history, onChunk)) || localReply(state.persona, state.mode, history);
+      answer = (await remoteReply(history, onChunk, (s) => { src = s; })) || localReply(state.persona, state.mode, history);
     } catch (e) {
       answer = localReply(state.persona, state.mode, history);
     }
@@ -508,6 +522,7 @@
     liveShown = false;
     if (token !== gen) { pending = false; render(); return; }
     const deaMsg = { id: uid(), role: "dea", content: answer, at: Date.now() };
+    if (src.length) deaMsg.src = src;
     chat.msgs.push(deaMsg);
     cloudSave(chat, deaMsg);
     chat.msgs = chat.msgs.slice(-80);

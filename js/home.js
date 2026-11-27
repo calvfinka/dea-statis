@@ -97,7 +97,12 @@
   }
   $("h-plus").addEventListener("click", function () { toast("Lampiran segera hadir."); });
   $("h-create").addEventListener("click", function () { $("h-create").classList.toggle("on"); toast($("h-create").classList.contains("on") ? "Mode Create aktif (tampilan saja dulu)." : "Mode Create mati."); });
-  $("h-web").addEventListener("click", function () { var b = $("h-web"); b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true")); });
+  $("h-web").setAttribute("aria-pressed", String(read("dea-web") !== "0"));
+  $("h-web").addEventListener("click", function () {
+    var on = $("h-web").getAttribute("aria-pressed") !== "true";
+    $("h-web").setAttribute("aria-pressed", String(on)); store("dea-web", on ? "1" : "0");
+    toast(on ? "Pencarian web aktif (otomatis bila perlu)." : "Pencarian web dimatikan.");
+  });
   var pro = $("h-pro");
   pro.setAttribute("aria-checked", read("dea-home-pro") === "1" ? "true" : "false");
   pro.addEventListener("click", function () {

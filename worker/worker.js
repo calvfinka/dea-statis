@@ -17,7 +17,7 @@ import { plan } from './mind.js';
 import { identify, charge, quotaHeaders, denyMessage, ipKey, MEDIA_COST } from './guard.js';
 import { placesFor, PLACES_FALLBACK_URL } from './places.js';
 import { siteFor } from './site.js';
-import { searchInternet, searchContext, buildSearchQuery, providerOf } from './search.js';
+import { searchInternet, searchContext, sourceMark, buildSearchQuery, providerOf } from './search.js';
 import { browseTop, pagesContext, browseEnabled } from './browse.js';
 import { loadMemory, memoryLayer, bearer as memBearer } from './memory.js';
 import { logUsage, purgeUsage, purgeTraining, topicOf, deviceOf, estTokens } from './usage.js';
@@ -1015,7 +1015,7 @@ const deaCore = {
     if (isNgobrol) { const memText = await memoryLayer({ env, request, ident, history, mind, memP, ctx, today }); if (memText) system += '\n\n' + memText; } // memori pengguna login (tamu: hanya catatan ajakan login)
     /* Mode Internet: hanya Dea, tanpa lampiran, dan hanya bila datanya tidak ada di data GWM / tempat. Mode Thinking: pertanyaan kompleks, mode internet, atau flag `thinking: true` dari klien. */
     if (isNgobrol && env.GEMINI_API_KEY && asksNetAbility(history)) system += '\n\n' + NET_ABILITY_NOTE;
-    const wantNet = isNgobrol && !items.length && !!(providerOf(env) || env.GEMINI_API_KEY) && needsInternet(history, siteBlock, placeBlock, mind);
+    const wantNet = isNgobrol && data.web !== false && !items.length && !!(providerOf(env) || env.GEMINI_API_KEY) && needsInternet(history, siteBlock, placeBlock, mind);
     const think = isNgobrol && (wantNet || !!mind.complex || cl.deep || (data && data.thinking === true));
     if (think) system += '\n\n' + thinkNote(history);
     const opts = { temp: Math.min(mind.temp, cl.tempCap), effort: think ? 'medium' : mind.effort, thinking: think ? Math.max(mind.thinking || 0, 1024) : mind.thinking, maxTokens: 4000 };
@@ -1106,12 +1106,12 @@ const deaCore = {
 
     /* Mode Internet. Urutan: (1) searchInternet() = Tavily / Serper; hasilnya DISISIPKAN ke prompt lalu rantai model biasa (Gemini -> Groq) menyusun jawaban,
        (2) cadangan: Gemini + Google Search, (3) bila semuanya gagal: kalimat tetap yang jujur (bukan model yang berimprovisasi "belum punya data"). */
-    let netSites = null;
+    let netSites = null, netMark = '';
     const tryInternet = async () => {
       if (!wantNet) return null;
       const sr = await searchInternet(buildSearchQuery(history, today), env);
       if (sr.ok) {
-        system += '\n\n' + searchContext(sr, today); netSites = sr.sites;
+        system += '\n\n' + searchContext(sr, today); netSites = sr.sites; netMark = sourceMark(sr);
         return null; // jangan tunggu browse halaman: itu menahan token pertama
       }
       if (env.GEMINI_API_KEY) {
@@ -1137,6 +1137,7 @@ const deaCore = {
           yield (net.down ? NETFAIL_MARK : '') + net.text + netTail(net);
           return;
         }
+        if (netMark) yield netMark; // daftar sumber untuk kartu di layar
         for (const st of steps) {
           let h;
           try { h = await openStep(st); } catch (e) { noteErr(st, e); continue; }
