@@ -15,7 +15,7 @@ npx --yes wrangler@4 deploy
 
 echo
 echo "== Isi secret (kosongkan lalu Enter untuk melewati) =="
-for NAME in GROQ_API_KEY GEMINI_API_KEY TAVILY_API_KEY SERPER_API_KEY SUPABASE_URL SUPABASE_SERVICE_KEY ALERT_WEBHOOK_URL; do
+for NAME in GROK_API_KEY GROQ_API_KEY GEMINI_API_KEY TAVILY_API_KEY SERPER_API_KEY SUPABASE_URL SUPABASE_SERVICE_KEY ALERT_WEBHOOK_URL; do
   read -rsp "Tempel $NAME: " VALUE
   echo
   if [ -n "$VALUE" ]; then

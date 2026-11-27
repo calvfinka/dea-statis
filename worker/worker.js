@@ -1,8 +1,10 @@
 /* GoWithDME AI (Dea / DME AI) — Cloudflare Worker (proxy aman untuk API key)
    Semua kunci dan nama model dibaca dari env, TIDAK ada kunci di dalam berkas ini:
-   - Secret : GEMINI_API_KEY, GROQ_API_KEY (+ SUPABASE_URL, SUPABASE_SERVICE_KEY, ALERT_WEBHOOK_URL bila dipakai)
-   - Teks   : GEMINI_MODEL (bawaan gemini-4-hydrogen), GROQ_MODEL (bawaan openai/gpt-oss-120b), ALLOWED_ORIGINS
-   Urutan jawab: Gemini (utama) -> Groq (cadangan otomatis bila Gemini galat / lambat / kena batas). Pengguna tidak pernah melihat galat mentah.
+   - Secret baru: GROK_API_KEY (xAI). Kunci lama (GEMINI_API_KEY, GROQ_API_KEY) tidak ditulis dan tidak diubah di sini.
+   - Secret lain: SUPABASE_URL, SUPABASE_SERVICE_KEY, ALERT_WEBHOOK_URL bila dipakai
+   - Teks   : GROK_MODEL (bawaan grok-4.7), GROK_VOICE (bawaan iris), GEMINI_MODEL, GROQ_MODEL, ALLOWED_ORIGINS
+   Urutan jawab: Grok di https://api.x.ai/v1 (utama) -> Gemini -> Groq (cadangan bila Grok galat / lambat / kena batas).
+   Persona, gombalan, dan cara nanggepin "kangen" / "gombalin aku" TIDAK diubah (tetap di NGOBROL_PERSONA + mind.js).
    Mode Thinking: "Dea lagi mikir..." tampil dulu, lalu jawaban yang nyambung dengan 2-3 chat terakhir.
    Mode Internet: pertanyaan event / tiket / jadwal / harga / cuaca yang TIDAK ada di data situs dicari lewat Google Search (Gemini), dan sumbernya disebut. */
 
@@ -270,6 +272,17 @@ async function checkHealth(env, force) {
       want.forEach(m => { models['groq:' + m] = ids.includes(m) ? 'ok' : 'gone'; });
     })());
   }
+  if (env.GROK_API_KEY) {
+    const want = [grokModel(env), env.GROK_VISION_MODEL || grokModel(env)];
+    jobs.push((async () => {
+      const r = await probe('https://api.x.ai/v1/models', { Authorization: 'Bearer ' + env.GROK_API_KEY });
+      if (!r || r.status !== 200) { const v = r ? verdict(r.status) : 'down'; want.forEach(m => { models['grok:' + m] = v; }); return; }
+      let ids = [];
+      try { const j = await r.json(); ids = (j.data || []).map(x => x.id); } catch (e) {}
+      // Katalog kadang kosong atau pakai alias; 200 + kunci sah tetap "ok" bila id persis tidak tertulis.
+      want.forEach(m => { models['grok:' + m] = !ids.length || ids.includes(m) ? 'ok' : 'gone'; });
+    })());
+  }
   await Promise.all(jobs);
   const bad = Object.keys(models).filter(k => models[k] === 'gone' || models[k] === 'auth');
   const d = { ok: Object.keys(models).length > 0 && bad.length === 0, at: new Date(now).toISOString(), models };
@@ -408,19 +421,28 @@ function sourceContext(src, today) {
     (s.meta.length ? ' | ' + s.meta.join(', ') : '') + (s.desc ? ' | ' + s.desc : '')).join('\n');
 }
 
-const GROQ_MODEL = 'openai/gpt-oss-120b'; // cadangan utama; bisa diganti lewat env GROQ_MODEL
+const GROQ_MODEL = 'openai/gpt-oss-120b'; // cadangan; bisa diganti lewat env GROQ_MODEL
 const GROQ_BACKUP = 'openai/gpt-oss-20b'; // cadangan terakhir bila 120b juga gagal
-const GEMINI_MODEL = 'gemini-4-hydrogen'; // model utama; bisa diganti lewat env GEMINI_MODEL tanpa ubah kode
+const GEMINI_MODEL = 'gemini-4-hydrogen'; // cadangan; bisa diganti lewat env GEMINI_MODEL tanpa ubah kode
+const GROK_MODEL = 'grok-4.7'; // model utama (xAI). Ganti lewat env GROK_MODEL. Kunci ada di secret GROK_API_KEY, bukan di sini.
+const GROK_VOICE = 'iris'; // suara cewek hangat/ceria untuk TTS. Ganti lewat env GROK_VOICE (ara, luna, carina, ...).
 /* Nama model dari env (dipangkas); kosong = bawaan di atas. */
 const gemModel = (env) => String((env && env.GEMINI_MODEL) || '').trim() || GEMINI_MODEL;
 const groqModel = (env) => String((env && env.GROQ_MODEL) || '').trim() || GROQ_MODEL;
+const grokModel = (env) => String((env && env.GROK_MODEL) || '').trim() || GROK_MODEL;
+const grokVoice = (env) => String((env && env.GROK_VOICE) || '').trim() || GROK_VOICE;
 const GEMINI_LITE = 'gemini-3.5-flash-lite'; // cadangan khusus lampiran bila Flash penuh/kena kuota
 const TIMEOUT_MS = 20000;
-/* Batas menunggu TOKEN PERTAMA per langkah (jalur streaming teks). Gemini 12 dtk, Groq 15 dtk: total terburuk 12+15+15 = 42 dtk, di bawah batas diam klien (45 dtk).
-   Sebelumnya 20+20+20 = 60 dtk, jadi klien menyerah lebih dulu dan pengguna mendapat jawaban lokal. Bisa diubah lewat env GEMINI_FIRST_MS / GROQ_FIRST_MS. */
+/* Batas menunggu TOKEN PERTAMA per langkah (jalur streaming teks). Grok 15 dtk, Gemini 7 dtk, Groq 9 dtk.
+   Bisa diubah lewat env GROK_FIRST_MS / GEMINI_FIRST_MS / GROQ_FIRST_MS. */
 const GEMINI_FIRST_MS = 7000;
 const GROQ_FIRST_MS = 9000;
-const firstMs = (st, env) => (st.k === 'groq' ? (parseInt(env && env.GROQ_FIRST_MS, 10) || GROQ_FIRST_MS) : (parseInt(env && env.GEMINI_FIRST_MS, 10) || GEMINI_FIRST_MS));
+const GROK_FIRST_MS = 15000;
+const firstMs = (st, env) => st.k === 'grok'
+  ? (parseInt(env && env.GROK_FIRST_MS, 10) || GROK_FIRST_MS)
+  : st.k === 'groq'
+    ? (parseInt(env && env.GROQ_FIRST_MS, 10) || GROQ_FIRST_MS)
+    : (parseInt(env && env.GEMINI_FIRST_MS, 10) || GEMINI_FIRST_MS);
 const MAX_MSGS = 12;
 const MAX_MSGS_NGOBROL = 30;
 const MAX_CHARS = 4000; // batas satu pesan pengguna (harus sama dengan lib/limits.js; dijaga tes)
@@ -559,6 +581,21 @@ function groqBody(model, history, system, items, stream, o) {
   if (stream) body.stream = true;
   return body;
 }
+/* Format chat Grok = OpenAI chat completions di https://api.x.ai/v1/chat/completions.
+   temperature dari mind.js (ngobrol ~0.8) biar tetap santai; max_tokens cukup panjang supaya penjelasan tidak kepotong.
+   reasoning_effort rendah supaya Grok tidak "jadi CS" dan tidak menaruh proses mikir ke jawaban. plain=true membuang field itu bila API menolak (400). */
+function grokBody(model, history, system, items, stream, o) {
+  o = o || {};
+  const body = {
+    model,
+    messages: groqMessages(history, system, items),
+    temperature: o.temp == null ? 0.8 : o.temp,
+    max_tokens: o.maxTokens == null ? 4000 : o.maxTokens
+  };
+  if (stream) body.stream = true;
+  if (!o.plain) body.reasoning_effort = 'low';
+  return body;
+}
 // Gemini 3 ke atas memakai tingkat berpikir berupa teks (thinkingLevel); Gemini 2.x memakai thinkingBudget.
 const isGem3 = (model) => /^gemini-(?:[3-9]|\d{2,})/.test(model || GEMINI_MODEL);
 function geminiBody(history, system, items, o, model) {
@@ -580,13 +617,31 @@ function geminiBody(history, system, items, o, model) {
   };
 }
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROK_BASE = 'https://api.x.ai/v1';
+const GROK_URL = GROK_BASE + '/chat/completions';
+const GROK_TTS_URL = GROK_BASE + '/tts';
 const geminiUrl = (model) => 'https://generativelanguage.googleapis.com/v1beta/models/' + (model || GEMINI_MODEL);
 const groqHeaders = (key) => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key });
+const grokHeaders = (key) => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key });
 const geminiHeaders = (key) => ({ 'Content-Type': 'application/json', 'x-goog-api-key': key });
+
+function grokText(content) {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) return content.map((p) => (p && (p.text || p.content)) || '').join('');
+  return '';
+}
 
 async function callGroq(model, history, system, key, items, ms, o) {
   const j = await post(GROQ_URL, groqHeaders(key), groqBody(model, history, system, items, false, o), ms);
   const t = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+  if (!t) { const e = new Error('empty'); e.status = 0; throw e; }
+  return t;
+}
+
+async function callGrok(model, history, system, key, items, ms, o) {
+  const j = await post(GROK_URL, grokHeaders(key), grokBody(model, history, system, items, false, o), ms);
+  const msg = j.choices && j.choices[0] && j.choices[0].message;
+  const t = grokText(msg && msg.content).trim();
   if (!t) { const e = new Error('empty'); e.status = 0; throw e; }
   return t;
 }
@@ -621,6 +676,12 @@ async function callGeminiSearch(history, system, key, ms, o, model) {
 }
 
 const pickGroq = (j) => (j && j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || '';
+/* Delta Grok sama seperti OpenAI (choices[0].delta.content). reasoning_content TIDAK dikirim ke pengguna. */
+const pickGrok = (j) => {
+  const d = j && j.choices && j.choices[0] && j.choices[0].delta;
+  if (!d) return '';
+  return grokText(d.content);
+};
 const pickGemini = (j) => {
   const p = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
   return p ? p.map((x) => x.text || '').join('') : '';
@@ -672,7 +733,40 @@ async function openStream(url, headers, body, pick, ms) {
   finally { clearTimeout(timer); }
 }
 const openGroq = (model, history, system, key, items, ms, o) => openStream(GROQ_URL, groqHeaders(key), groqBody(model, history, system, items, true, o), pickGroq, ms);
+const openGrok = (model, history, system, key, items, ms, o) => openStream(GROK_URL, grokHeaders(key), grokBody(model, history, system, items, true, o), pickGrok, ms);
 const openGemini = (history, system, key, items, ms, o, model) => openStream(geminiUrl(model) + ':streamGenerateContent?alt=sse', geminiHeaders(key), geminiBody(history, system, items, o, model), pickGemini, ms);
+
+/* Suara Dea lewat Grok TTS. Kunci hanya dari env.GROK_API_KEY. Gagal = null, klien pakai suara browser. */
+async function grokSpeak(env, text, origin) {
+  const clean = String(text || '').replace(/<!--[\s\S]*?-->/g, '').replace(/[*_`#>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 700);
+  if (!clean || !env.GROK_API_KEY) return json({ code: 'novoice', message: 'Suara belum siap.' }, 503, origin);
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(GROK_TTS_URL, {
+      method: 'POST',
+      headers: grokHeaders(env.GROK_API_KEY),
+      body: JSON.stringify({ text: clean, voice_id: grokVoice(env), language: 'id' }),
+      signal: ctl.signal
+    });
+    if (!r.ok || !r.body) {
+      console.error('TTS_FAIL', r.status);
+      return json({ code: 'novoice', message: 'Suara lagi nggak bisa. Dea tetap jawab lewat teks.' }, 503, origin);
+    }
+    const ct = r.headers.get('Content-Type') || 'audio/mpeg';
+    if (ct.indexOf('audio') !== 0 && ct.indexOf('application/octet-stream') !== 0) {
+      console.error('TTS_FAIL', 'ctype', ct.slice(0, 40));
+      return json({ code: 'novoice', message: 'Suara lagi nggak bisa. Dea tetap jawab lewat teks.' }, 503, origin);
+    }
+    return new Response(r.body, {
+      status: 200,
+      headers: Object.assign({ 'Content-Type': ct.split(';')[0], 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }, cors(origin))
+    });
+  } catch (e) {
+    console.error('TTS_FAIL', e && e.message);
+    return json({ code: 'novoice', message: 'Suara lagi nggak bisa. Dea tetap jawab lewat teks.' }, 503, origin);
+  } finally { clearTimeout(timer); }
+}
 
 /* Penjaga gaya Dea (mode ngobrol): "beb" maksimal 2x dan emoji maksimal 2 per balasan, apa pun yang dikatakan model.
    push(potongan) dipakai saat streaming (menahan 12 karakter terakhir agar kata yang terbelah tidak lolos hitungan), flush() di akhir, all(teks) untuk jawaban utuh. */
@@ -832,7 +926,7 @@ export default {
     if (request.method === 'GET' && new URL(request.url).pathname === '/health') {
       const d = await checkHealth(env);
       /* build + internet: untuk memastikan Worker yang berjalan di Cloudflare adalah versi yang punya fitur internet, dan kuncinya terpasang (hanya true/false, bukan isinya). */
-      const out = Object.assign({}, d, { build: BUILD, internet: !!(providerOf(env) || env.GEMINI_API_KEY), search: providerOf(env), browse: browseEnabled(env) });
+      const out = Object.assign({}, d, { build: BUILD, internet: !!(providerOf(env) || env.GEMINI_API_KEY), search: providerOf(env), browse: browseEnabled(env), grok: !!env.GROK_API_KEY, voice: !!env.GROK_API_KEY });
       return new Response(JSON.stringify(out), { status: d.ok ? 200 : 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } });
     }
     if (request.method !== 'POST') return json({ code: 'method', message: 'Gunakan POST.' }, 405, okOrigin ? origin : null);
@@ -849,6 +943,8 @@ export default {
       if (raw.length > MAX_BODY) return json({ code: 'big', message: 'Lampiran terlalu besar.' }, 413, origin);
       data = JSON.parse(raw);
     } catch (e) { return json({ code: 'bad', message: 'Permintaan tidak valid.' }, 400, origin); }
+    /* Suara: body { voice:true, text } — bukan chat. Fungsi fetch chat di klien tidak diubah. */
+    if (data && data.voice === true) return grokSpeak(env, data.text, origin);
     const mode = data && data.mode === 'search' ? 'search' : (data && typeof data.mode === 'string' && Object.prototype.hasOwnProperty.call(PROMPTS, data.mode) ? data.mode : DEFAULT_MODE);
     const isNgobrol = mode === 'ngobrol';
     const longLen = tooLong(data && data.history);
@@ -921,7 +1017,7 @@ export default {
     const wantNet = isNgobrol && !items.length && !!(providerOf(env) || env.GEMINI_API_KEY) && needsInternet(history, siteBlock, placeBlock, mind);
     const think = isNgobrol && (wantNet || !!mind.complex || cl.deep || (data && data.thinking === true));
     if (think) system += '\n\n' + thinkNote(history);
-    const opts = { temp: Math.min(mind.temp, cl.tempCap), effort: think ? 'medium' : mind.effort, thinking: think ? Math.max(mind.thinking || 0, 1024) : mind.thinking };
+    const opts = { temp: Math.min(mind.temp, cl.tempCap), effort: think ? 'medium' : mind.effort, thinking: think ? Math.max(mind.thinking || 0, 1024) : mind.thinking, maxTokens: 4000 };
     const tidyNew = () => (isNgobrol ? makeTidy(2, 2) : null);
 
     /* Pencatatan pemakaian ANONIM untuk menu AI di admin (usage.js): label topik, perangkat, lama jawab, token perkiraan. Tanpa isi pesan.
@@ -947,20 +1043,21 @@ export default {
     const media = hasImg || hasPdf;
     const steps = [];
     if (media) {
+      if (env.GROK_API_KEY && !hasPdf) steps.push({ k: 'grok', model: env.GROK_VISION_MODEL || grokModel(env) });
       if (env.GEMINI_API_KEY) steps.push({ k: 'gemini', model: gemModel(env) }, { k: 'gemini', model: env.GEMINI_LITE_MODEL || GEMINI_LITE });
       if (env.GROQ_API_KEY && !hasPdf) steps.push({ k: 'groq', model: env.GROQ_VISION_MODEL || GROQ_VISION });
     } else {
-      // Gemini dulu (utama); bila galat / timeout / kena batas, otomatis pindah ke Groq (cadangan).
+      // Grok dulu (utama). Bila galat / timeout / kena batas, otomatis pindah ke Gemini lalu Groq.
+      if (env.GROK_API_KEY) steps.push({ k: 'grok', model: grokModel(env) });
       if (env.GEMINI_API_KEY) steps.push({ k: 'gemini', model: gemModel(env) });
       if (env.GROQ_API_KEY) steps.push({ k: 'groq', model: groqModel(env) });
       if (env.GROQ_API_KEY && groqModel(env) !== GROQ_BACKUP) steps.push({ k: 'groq', model: GROQ_BACKUP });
-      // Opsional: STREAM_PRIMARY=groq di [vars] -> Groq jadi yang pertama untuk obrolan biasa (token pertama biasanya jauh lebih cepat); Gemini jadi cadangan. Mode berpikir tetap Gemini dulu.
-      // Ngobrol biasa: Groq duluan supaya token pertama cepat. Gemini tetap cadangan. STREAM_PRIMARY=gemini memaksa Gemini duluan.
-      const groqFirst = !think && env.GROQ_API_KEY && String(env.STREAM_PRIMARY || '').toLowerCase() !== 'gemini' && (isNgobrol || String(env.STREAM_PRIMARY || '').toLowerCase() === 'groq');
+      // Tanpa GROK_API_KEY, perilaku lama: Groq duluan untuk ngobrol biasa. STREAM_PRIMARY=gemini memaksa Gemini duluan.
+      const groqFirst = !env.GROK_API_KEY && !think && env.GROQ_API_KEY && String(env.STREAM_PRIMARY || '').toLowerCase() !== 'gemini' && (isNgobrol || String(env.STREAM_PRIMARY || '').toLowerCase() === 'groq');
       if (groqFirst) steps.sort((a, b) => (a.k === 'groq' ? 0 : 1) - (b.k === 'groq' ? 0 : 1));
     }
     if (!steps.length) {
-      return media && (env.GROQ_API_KEY || env.GEMINI_API_KEY)
+      return media && (env.GROQ_API_KEY || env.GEMINI_API_KEY || env.GROK_API_KEY)
         ? json({ code: 'nofile', message: hasPdf ? 'PDF belum bisa dibaca sekarang. Kirim sebagai foto atau tempel teksnya.' : 'Foto belum bisa dibaca sekarang. Coba lagi nanti.' }, 422, origin)
         : json({ code: 'server', message: 'Server AI belum dikonfigurasi.' }, 500, origin);
     }
@@ -969,21 +1066,25 @@ export default {
     const statuses = [];
     let lastErr = '';
 
-    /* Satu langkah model. Bila Gemini menolak pengaturan berpikir (400), ulangi sekali tanpa pengaturan itu sebelum pindah ke Groq. */
+    /* Satu langkah model. Bila Grok/Gemini menolak pengaturan (400), ulangi sekali tanpa pengaturan itu sebelum pindah ke cadangan. */
     const openStep = async (st) => {
       const sms = media ? ms : firstMs(st, env); // media tetap 22 dtk; teks memakai batas token-pertama yang lebih ketat
-      const run = (o) => st.k === 'groq'
-        ? openGroq(st.model, history, system, env.GROQ_API_KEY, items, sms, o)
-        : openGemini(history, system, env.GEMINI_API_KEY, items, sms, o, st.model);
+      const run = (o) => st.k === 'grok'
+        ? openGrok(st.model, history, system, env.GROK_API_KEY, items, sms, o)
+        : st.k === 'groq'
+          ? openGroq(st.model, history, system, env.GROQ_API_KEY, items, sms, o)
+          : openGemini(history, system, env.GEMINI_API_KEY, items, sms, o, st.model);
       try { return await run(opts); }
-      catch (e) { if (st.k === 'gemini' && e && e.status === 400) return await run({ ...opts, plain: true }); throw e; }
+      catch (e) { if ((st.k === 'gemini' || st.k === 'grok') && e && e.status === 400) return await run({ ...opts, plain: true }); throw e; }
     };
     const callStep = async (st) => {
-      const run = (o) => st.k === 'groq'
-        ? callGroq(st.model, history, system, env.GROQ_API_KEY, items, ms, o)
-        : callGemini(history, system, env.GEMINI_API_KEY, items, ms, o, st.model);
+      const run = (o) => st.k === 'grok'
+        ? callGrok(st.model, history, system, env.GROK_API_KEY, items, ms, o)
+        : st.k === 'groq'
+          ? callGroq(st.model, history, system, env.GROQ_API_KEY, items, ms, o)
+          : callGemini(history, system, env.GEMINI_API_KEY, items, ms, o, st.model);
       try { return await run(opts); }
-      catch (e) { if (st.k === 'gemini' && e && e.status === 400) return await run({ ...opts, plain: true }); throw e; }
+      catch (e) { if ((st.k === 'gemini' || st.k === 'grok') && e && e.status === 400) return await run({ ...opts, plain: true }); throw e; }
     };
     const noteErr = (st, e) => {
       console.error('AI_FAIL', st.k, st.model || '', e && e.status, e && e.message); // galat mentah hanya di log, TIDAK ke pengguna
@@ -1096,4 +1197,4 @@ export default {
   }
 };
 
-export { needsInternet, asksNetAbility, makeTidy, thinkNote, callGeminiSearch, gemModel, groqModel, pingSupabase, checkHealth, eventCards, cardsPrefix, plan, loadExamples, pickExamples, examplesContext, PROMPTS, pickKnowledge, pickMountains, pickPosts, siteContext, fold, wibToday, pickEvents, eventContext, cleanHistory, clip, tooLong, MAX_CHARS, cleanSources, sourcesFromEvents, sourceContext, cleanAttachments, groqMessages, geminiContents, sseText };
+export { needsInternet, asksNetAbility, makeTidy, thinkNote, callGeminiSearch, gemModel, groqModel, grokModel, pingSupabase, checkHealth, eventCards, cardsPrefix, plan, loadExamples, pickExamples, examplesContext, PROMPTS, pickKnowledge, pickMountains, pickPosts, siteContext, fold, wibToday, pickEvents, eventContext, cleanHistory, clip, tooLong, MAX_CHARS, cleanSources, sourcesFromEvents, sourceContext, cleanAttachments, groqMessages, geminiContents, sseText };

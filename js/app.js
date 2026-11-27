@@ -430,27 +430,57 @@
     $("voice-kicker").textContent = "Suara · " + PERSONAS[state.persona].label;
     $("voice-note").textContent = "Tekan tombol, bicara dalam bahasa Indonesia, lalu diam. Dea akan menjawab dengan suara.";
   }
-  /* Suara Dea: pilih suara perempuan Indonesia yang ada di perangkat (Google/Microsoft/Apple), lalu atur nada dan kecepatan per persona. */
+  /* Suara Dea: Grok TTS (iris, bahasa Indonesia) bila worker siap; kalau tidak, suara perempuan Indonesia yang paling natural di perangkat. */
   const FEMALE = /female|perempuan|wanita|gadis|damayanti|andika|indah|google bahasa indonesia|microsoft (gadis|indah)/i;
   const MALE = /\bmale\b|\bpria\b|\bardi\b|rizki/i;
+  const NEURAL = /neural|natural|premium|wavenet|enhanced|online|aria|jenny/i;
+  let voiceAudio = null;
+  function stopVoice() {
+    if (voiceAudio) { try { voiceAudio.pause(); } catch (e) {} voiceAudio = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
   function pickVoice() {
     const all = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("id"));
     if (!all.length) return null;
-    return all.find((v) => FEMALE.test(v.name) && !MALE.test(v.name)) || all.find((v) => !MALE.test(v.name)) || all[0];
+    const female = all.filter((v) => FEMALE.test(v.name) && !MALE.test(v.name));
+    const pool = female.length ? female : all.filter((v) => !MALE.test(v.name));
+    return pool.find((v) => NEURAL.test(v.name)) || pool[0] || all[0];
   }
-  function speak(text) {
+  function speakLocal(clean) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const clean = String(text || "").replace(/<!--[\s\S]*?-->/g, "").replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
-    if (!clean) return;
     const u = new SpeechSynthesisUtterance(clean.slice(0, 500));
     u.lang = "id-ID";
-    // Nada tinggi dan tempo sedikit cepat: terdengar muda, ceria, lembut.
-    u.pitch = state.persona === "galak" ? 1.0 : state.persona === "manja" ? 1.35 : 1.25;
-    u.rate = state.persona === "galak" ? 1.05 : 1.08;
+    // Nada dekat suara orang, bukan chipmunk. Manja sedikit lebih lembut, bukan lebih tinggi berlebihan.
+    u.pitch = state.persona === "galak" ? 0.96 : state.persona === "manja" ? 1.08 : 1.02;
+    u.rate = state.persona === "galak" ? 1.0 : 0.96;
     const v = pickVoice();
     if (v) u.voice = v;
     window.speechSynthesis.speak(u);
+  }
+  async function speak(text) {
+    const clean = String(text || "").replace(/<!--[\s\S]*?-->/g, "").replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    stopVoice();
+    if (location.hostname === "ai.gowithdme.com") {
+      try {
+        const res = await fetch("https://dme-ai.calvfinka.workers.dev", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voice: true, text: clean.slice(0, 700) }),
+        });
+        const ct = (res.headers.get("content-type") || "");
+        if (res.ok && ct.indexOf("audio") === 0) {
+          const url = URL.createObjectURL(await res.blob());
+          const a = new Audio(url);
+          voiceAudio = a;
+          a.onended = () => { URL.revokeObjectURL(url); if (voiceAudio === a) voiceAudio = null; };
+          await a.play();
+          return;
+        }
+      } catch (e) { /* jatuh ke suara browser */ }
+    }
+    speakLocal(clean);
   }
   // Daftar suara di sebagian browser baru terisi belakangan; muat ulang saat siap.
   if (window.speechSynthesis && "onvoiceschanged" in window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
@@ -458,7 +488,7 @@
   async function send(raw, opts) {
     const text = (raw || "").trim();
     if (!text || pending) return;
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    stopVoice();
     const id = ensure();
     const chat = active();
     chat.persona = state.persona;
@@ -558,7 +588,7 @@
   $("open-rail").addEventListener("click", () => { $("rail").classList.add("open"); $("scrim").hidden = false; });
   $("close-rail").addEventListener("click", closeRail);
   $("scrim").addEventListener("click", closeRail);
-  $("stop").addEventListener("click", () => { gen++; pending = false; liveText = ""; liveShown = false; if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); });
+  $("stop").addEventListener("click", () => { gen++; pending = false; liveText = ""; liveShown = false; stopVoice(); render(); });
   $("theme-home").addEventListener("click", () => setTheme(theme() === "dark" ? "light" : "dark"));
   $("theme-chat").addEventListener("click", () => setTheme(theme() === "dark" ? "light" : "dark"));
   document.querySelectorAll("textarea").forEach((ta) => {

@@ -11,14 +11,18 @@ workers_dev = true
 # Domain yang boleh memanggil Worker ini (pisahkan dengan koma jika lebih dari satu)
 ALLOWED_ORIGINS = "https://ai.gowithdme.com,https://search.gowithdme.com"
 
-# Model AI (teks biasa, BUKAN rahasia). Dibaca worker.js lewat env.GEMINI_MODEL dan env.GROQ_MODEL.
-# Ganti nama model di sini lalu deploy ulang; kode tidak perlu diubah.
-# Gemini = model utama. Groq = cadangan otomatis bila Gemini galat / timeout / kena batas.
+# Model AI (teks biasa, BUKAN rahasia).
+# Utama: Grok (xAI) lewat https://api.x.ai/v1 . Cadangan: Gemini lalu Groq, bila Grok gagal.
+# Kunci BARU (secret, jangan ditulis di file ini): GROK_API_KEY
+#   cd worker && npx wrangler secret put GROK_API_KEY
+# Kunci lama (GEMINI_API_KEY, GROQ_API_KEY) tidak dipindah dan tidak dicetak di repo.
+GROK_MODEL = "grok-4.7"
+GROK_VOICE = "iris"
 GEMINI_MODEL = "gemini-4-hydrogen"
 GROQ_MODEL = "openai/gpt-oss-120b"
 
 # KUNCI API JANGAN ditulis di berkas ini. Isi sebagai Secret di Cloudflare Dashboard:
-#   GEMINI_API_KEY, GROQ_API_KEY (dan SUPABASE_URL, SUPABASE_SERVICE_KEY, ALERT_WEBHOOK_URL bila dipakai).
+#   GEMINI_API_KEY, GROQ_API_KEY, GROK_API_KEY (dan SUPABASE_URL, SUPABASE_SERVICE_KEY, ALERT_WEBHOOK_URL bila dipakai).
 # Pencarian internet Dea (search.js): isi SALAH SATU secret TAVILY_API_KEY (tavily.com) atau SERPER_API_KEY (serper.dev).
 #   Bila dua-duanya ada, Tavily dipakai; paksa lewat SEARCH_PROVIDER = "serper" (teks biasa). Tanpa keduanya, Dea memakai cadangan Gemini + Google Search,
 #   dan log Worker mencatat SEARCH_NO_KEY. Cek status: GET /health -> "search": "tavily" | "serper" | null.
