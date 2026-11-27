@@ -70,6 +70,57 @@
     var box = sourceCards(list); box.dataset.key = key; bar.appendChild(box);
   }
 
+  /* ---- slide: disusun di perangkat dari isi jawaban (tanpa panggilan AI) ---- */
+  function slidesFrom(answer, title, sources) {
+    var slides = [{ h: title || "Jawaban Dea", items: [], cover: true }], cur = null;
+    function open(h) { cur = { h: h, items: [] }; slides.push(cur); }
+    String(answer).split("\n").forEach(function (line) {
+      var t = line.trim();
+      if (!t || /^_?Sumber: internet/.test(t)) return;
+      var head = /^(?:#{1,4}\s+(.+)|\*\*([^*]+)\*\*:?)$/.exec(t);
+      if (head) { open((head[1] || head[2]).replace(/\*\*/g, "")); return; }
+      t = plain(t.replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, "$1").replace(/^(?:[-*•]|\d+\.)\s+/, ""));
+      if (!cur) open("Ringkasan");
+      var used = cur.items.join("").length;
+      if (cur.items.length >= 5 || (cur.items.length && used + t.length > 420)) open(cur.h.replace(/ \(lanjutan\)$/, "") + " (lanjutan)");
+      cur.items.push(t);
+    });
+    slides = slides.filter(function (s) { return s.cover || s.items.length; });
+    for (var i = 0; i < sources.length; i += 6)
+      slides.push({ h: "Sumber", items: sources.slice(i, i + 6).map(function (s, k) { return (i + k + 1) + ". " + s.t + " - " + s.u; }) });
+    return slides;
+  }
+  function node(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; }
+  var DECK_CSS = ".deck-page{box-sizing:border-box;width:100%;aspect-ratio:16/9;container-type:inline-size;overflow:hidden;background:#fff;color:#18181b;border-radius:12px;border-top:6px solid #EC4899;font-family:'Plus Jakarta Sans',sans-serif}" +
+    ".deck-in{box-sizing:border-box;height:100%;padding:5cqw 6cqw;display:flex;flex-direction:column;justify-content:center;gap:2cqw}" +
+    ".deck-in h2{margin:0;font-family:inherit;letter-spacing:0;font-size:4.4cqw;line-height:1.2;color:#8B5CF6}.deck-in ul{margin:0;padding-left:3cqw;font-size:2.3cqw;line-height:1.4;overflow-wrap:anywhere}.deck-in li{margin-bottom:.8cqw}" +
+    ".deck-cover h2{font-size:6cqw}.deck-cover p{margin:0;font-size:2.4cqw;color:#EC4899}";
+  var PRINT_CSS = "@page{size:297mm 167mm;margin:0}@media print{html,body{margin:0!important;padding:0!important;height:auto!important;overflow:visible!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
+    "body>*:not(.deck){display:none!important}.deck{position:static!important;overflow:visible!important;padding:0!important;background:#fff!important}.deck-bar{display:none!important}" +
+    ".deck-list{max-width:none!important;display:block!important}.deck-page{width:297mm;height:166mm;border-radius:0;break-after:page}.deck-page:last-child{break-after:auto}}";
+  function openDeck(ans, q) {
+    var b = ans && ans.querySelector(".bubble"); if (!b) return;
+    var old = document.querySelector(".deck"); if (old) old.remove();
+    var slides = slidesFrom(rawOf(b), q, sourcesOf(b));
+    var deck = node("div", "deck"); deck.setAttribute("role", "dialog"); deck.setAttribute("aria-label", "Pratinjau slide");
+    var css = node("style", "", DECK_CSS + PRINT_CSS); deck.appendChild(css);
+    var bar = node("div", "deck-bar"), list = node("div", "deck-list");
+    slides.forEach(function (s) {
+      var page = node("section", "deck-page"), inner = node("div", "deck-in" + (s.cover ? " deck-cover" : ""));
+      inner.appendChild(node("h2", "", s.h));
+      if (s.cover) inner.appendChild(node("p", "", "Dibuat bersama Dea"));
+      else { var ul = node("ul"); s.items.forEach(function (x) { ul.appendChild(node("li", "", x)); }); inner.appendChild(ul); }
+      page.appendChild(inner); list.appendChild(page);
+    });
+    function btn(label, fn) { var x = node("button", "a-btn", label); x.type = "button"; x.addEventListener("click", fn); bar.appendChild(x); }
+    btn("Simpan PDF", function () { window.print(); });
+    btn("Unduh HTML", function () {
+      save("dea-slide.html", '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Slide Dea</title><style>body{margin:0;padding:16px;background:#18181b}.deck-list{max-width:960px;margin:auto;display:grid;gap:16px}' + DECK_CSS + PRINT_CSS + '</style></head><body><div class="deck">' + list.outerHTML + '</div></body></html>', "text/html");
+    });
+    btn("Tutup", function () { deck.remove(); });
+    deck.appendChild(bar); deck.appendChild(list); document.body.appendChild(deck);
+  }
+
   /* ---- menu kecil ---- */
   function closeMenus() {
     document.querySelectorAll(".s-menu").forEach(function (m) { m.hidden = true; });
@@ -121,7 +172,7 @@
     c.appendChild(menuOf([
       ["copy", "Teks polos (salin)", function () { copy(plain(context(d).a), "Disalin sebagai teks."); }],
       ["file", "Markdown (salin)", function () { var x = context(d); copy("# " + x.q + "\n\n" + x.a, "Disalin sebagai Markdown."); }],
-      ["slides", "Slide", function () { toast("Convert ke Slide segera hadir."); }],
+      ["slides", "Slide", function () { openDeck(d.previousElementSibling, context(d).q); }],
       ["book", "Dea Docs", function () { toast("Convert ke Dea Docs segera hadir."); }]
     ]));
     c.firstChild.addEventListener("click", function () { toggleMenu(c.lastChild); });
@@ -201,7 +252,12 @@
     var all = th.querySelectorAll(".thread-inner > .msg:not(.user):not(.live) .bubble");
     return all.length ? plain(rawOf(all[all.length - 1])) : "";
   }
-  $("s-slide").addEventListener("click", function () { toast("Generate AI Slide segera hadir."); });
+  $("s-slide").addEventListener("click", function () {
+    var all = th.querySelectorAll(".thread-inner > .t-actions");
+    if (!all.length) { toast("Belum ada jawaban untuk dijadikan slide."); return; }
+    var d = all[all.length - 1];
+    openDeck(d.previousElementSibling, context(d).q);
+  });
   $("s-share").addEventListener("click", function () {
     var t = lastAnswer(); if (!t) { toast("Belum ada jawaban untuk dibagikan."); return; }
     shareText(t);

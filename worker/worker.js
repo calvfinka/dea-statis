@@ -1127,7 +1127,7 @@ const deaCore = {
       console.error('NET_DOWN: semua jalur pencarian internet gagal (alasan: ' + (sr.reason || '?') + '); pengguna diberi pesan tetap');
       return { text: NET_DOWN_TEXT, sites: [], down: true };
     };
-    const netTail = (r) => (r && r.down ? '' : '\n\n_Sumber: internet (' + r.sites.join(', ') + '). Info bisa berubah, cek sumber resmi ya._');
+    const netTail = (r) => (r && r.down ? '' : '\n\nSumber: internet (' + r.sites.join(', ') + '). Info bisa berubah, cek sumber resmi ya.');
     const sourcesTail = () => (netSites && netSites.length ? netTail({ sites: netSites }) : '');
 
     /* Jalur Thinking (streaming): "Dea lagi mikir..." langsung tampil, lalu jawaban menyusul. Rantai Gemini -> Groq berjalan DI DALAM aliran,
