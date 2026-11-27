@@ -34,3 +34,6 @@ Secret (isi di Cloudflare > dme-ai > Settings > Variables and Secrets, tipe Secr
 `TAVILY_API_KEY` atau `SERPER_API_KEY` (opsional, pencarian internet), `BROWSER_LOG_SECRET` (opsional).
 Nama model (teks biasa) ada di `worker/wrangler.toml`: `GEMINI_MODEL`, `GEMINI_LITE_MODEL`, `GROQ_MODEL`, `GROQ_VISION_MODEL`.
 Cek hidup: `https://dme-ai.calvfinka.workers.dev/health`
+
+## Pencatatan obrolan (untuk admin > AI (Dea) > Percakapan)
+Tanpa persetujuan, tidak ada isi chat yang dicatat. Pengguna memilih lewat kotak sekali muncul, atau kapan saja lewat saklar **Catat obrolan saya** di jendela profil (`js/chatlog.js`). Worker mencatat lewat `worker/chatlog.js` (butuh secret `SUPABASE_URL` dan `SUPABASE_SERVICE_KEY`). Jalankan `supabase/admin_ai_chat.sql` dari repo admin lebih dulu. Uji: `node tests/chatlog.test.mjs`.

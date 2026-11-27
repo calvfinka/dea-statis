@@ -138,7 +138,7 @@
           history: history.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content })),
           stream: true,
           user_id: userId(),
-        }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId) : {})),
+        }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId, state.persona) : {})),
         signal: ctrl.signal,
       });
       if (!res.ok) {

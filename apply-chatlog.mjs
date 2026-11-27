@@ -27,7 +27,7 @@ edit('worker/worker.js', [
 edit('js/app.js', [
   ['kirim chat_log + chat_id', (s) => s.includes('DeaChatLog'),
     (s) => s.replace('        body: JSON.stringify({\n          message,', '        body: JSON.stringify(Object.assign({\n          message,')
-            .replace('          user_id: userId(),\n        }),', '          user_id: userId(),\n        }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId) : {})),')],
+            .replace('          user_id: userId(),\n        }),', '          user_id: userId(),\n        }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId, state.persona) : {})),')],
 ]);
 
 edit('index.html', [

@@ -5,6 +5,7 @@ import { pseudonym } from './usage.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX = 8000;
+const PERSONAS = ['ceria', 'galak', 'manja'];
 
 /* Ambil bagian yang perlu dari body permintaan. null = jangan catat. */
 export function parseLogReq(raw) {
@@ -22,6 +23,7 @@ export function parseLogReq(raw) {
   return {
     chatId: UUID.test(String(d.chat_id || '')) ? d.chat_id : null,
     mode: typeof d.mode === 'string' ? d.mode.slice(0, 20) : null,
+    persona: PERSONAS.includes(d.persona) ? d.persona : null,
     uid: typeof d.user_id === 'string' ? d.user_id : '',
     prompt: prompt.slice(0, MAX),
   };
@@ -63,10 +65,13 @@ export async function logChat(env, o) {
     const sid = o.chatId || crypto.randomUUID();
     const H = { ...svc(env), Authorization: 'Bearer ' + env.SUPABASE_SERVICE_KEY };
     const cf = o.cf || {};
-    const a = await fetch(base(env) + '/rest/v1/ai_chat_sessions?on_conflict=id', {
-      method: 'POST', headers: { ...H, Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ id: sid, user_id: userId, device, city: cf.city || null, region: cf.region || null, country: cf.country || null, mode: o.mode, last_at: new Date().toISOString() }),
+    const sessRow = { id: sid, user_id: userId, device, city: cf.city || null, region: cf.region || null, country: cf.country || null, mode: o.mode, last_at: new Date().toISOString() };
+    const putSession = (row) => fetch(base(env) + '/rest/v1/ai_chat_sessions?on_conflict=id', {
+      method: 'POST', headers: { ...H, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row),
     });
+    let a = await putSession(o.persona ? { ...sessRow, persona: o.persona } : sessRow);
+    // Kolom persona baru ada setelah admin_ai_chat.sql terbaru dijalankan; sebelum itu, catat tanpa persona agar chat tidak hilang.
+    if (!a.ok && o.persona) a = await putSession(sessRow);
     if (!a.ok) throw new Error('sesi HTTP ' + a.status);
     const b = await fetch(base(env) + '/rest/v1/ai_chat_messages', {
       method: 'POST', headers: { ...H, Prefer: 'return=minimal' },

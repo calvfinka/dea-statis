@@ -1,16 +1,43 @@
-/* Persetujuan pencatatan obrolan (ai.gowithdme.com). Tanpa "Boleh", Worker tidak mencatat isi obrolan apa pun. */
+/* Persetujuan pencatatan obrolan (ai.gowithdme.com). Tanpa "Boleh", Worker tidak mencatat isi obrolan apa pun.
+   Pilihan bisa diubah kapan saja lewat saklar "Catat obrolan saya" di jendela profil (#chatlog-toggle). */
 (function (w) {
   "use strict";
   var K = "dea_chatlog";
   function get() { try { return localStorage.getItem(K); } catch (e) { return null; } }
-  function set(v) { try { localStorage.setItem(K, v); } catch (e) {} }
+  function sync() {
+    var on = get() === "1";
+    var t = document.getElementById("chatlog-toggle");
+    if (t) t.checked = on;
+    var s = document.getElementById("chatlog-state");
+    if (s) s.textContent = on ? "Menyala: obrolanmu dicatat." : (get() === "0" ? "Mati: obrolanmu tidak dicatat." : "Belum dipilih, jadi tidak dicatat.");
+  }
+  function set(v) {
+    try { localStorage.setItem(K, v); } catch (e) {}
+    var bar = document.getElementById("chatlogBar");
+    if (bar) bar.remove();
+    sync();
+  }
 
   w.DeaChatLog = {
     allowed: function () { return get() === "1"; },
     /* Bidang tambahan untuk body permintaan ke Worker. */
-    fields: function (chatId) { return get() === "1" ? { chat_log: true, chat_id: chatId || undefined } : {}; },
+    fields: function (chatId, persona) { return get() === "1" ? { chat_log: true, chat_id: chatId || undefined, persona: persona || undefined } : {}; },
     set: set
   };
+
+  function bind() {
+    var t = document.getElementById("chatlog-toggle");
+    if (t && !t.dataset.bound) {
+      t.dataset.bound = "1";
+      t.addEventListener("change", function () { set(t.checked ? "1" : "0"); });
+    }
+    sync();
+    // Segarkan tampilan saklar setiap jendela profil dibuka.
+    // Selama jendela profil terbuka, sembunyikan kotak persetujuan (saklar di jendela itu sudah mewakili pilihan yang sama dan kotak tidak boleh menutupinya).
+    var dlg = document.getElementById("login");
+    function onDlg() { sync(); var bar = document.getElementById("chatlogBar"); if (bar && dlg) bar.hidden = !dlg.hidden; }
+    if (dlg && window.MutationObserver) new MutationObserver(onDlg).observe(dlg, { attributes: true, attributeFilter: ["hidden"] });
+  }
 
   function show() {
     if (get() !== null || document.getElementById("chatlogBar")) return;
@@ -29,6 +56,7 @@
     });
     document.body.appendChild(bar);
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(show, 1200); });
-  else setTimeout(show, 1200);
+  function start() { bind(); setTimeout(show, 1200); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
 })(window);

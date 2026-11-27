@@ -390,3 +390,14 @@ html.dark .i-moon, html:not(.dark) .i-sun { display: none; }
 
 .login-grid .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .login-grid .btn svg { width: 18px; height: 18px; flex: none; }
+
+/* Saklar pencatatan obrolan di jendela profil */
+.chatlog-set { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.chatlog-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.chatlog-txt { display: grid; gap: 2px; font-size: 14px; }
+.chatlog-txt small { color: var(--mute); font-size: 12.5px; }
+.login-card .chatlog-row input { appearance: none; -webkit-appearance: none; flex: none; width: 46px; height: 28px; padding: 0; border: 0; border-radius: 99px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; }
+.login-card .chatlog-row input::after { content: ""; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+.login-card .chatlog-row input:checked { background: var(--mint); }
+.login-card .chatlog-row input:checked::after { transform: translateX(18px); }
+.chatlog-set .fine { margin: 8px 0 0; }

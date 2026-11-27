@@ -17,6 +17,9 @@ ok(p && p.prompt === 'halo dea' && p.chatId === SID && p.mode === 'ngobrol', 'pr
 ok(parseLogReq(body({ chat_log: true, chat_id: 'ngawur' })).chatId === null, 'chat_id bukan UUID dibuang');
 ok(parseLogReq(body({ chat_log: true, history: [{ role: 'user', content: 'x'.repeat(9000) }] })).prompt.length === 8000, 'prompt dipotong 8000');
 
+ok(parseLogReq(body({ chat_log: true, persona: 'manja' })).persona === 'manja', 'persona dikenal terbaca');
+ok(parseLogReq(body({ chat_log: true, persona: '<script>' })).persona === null, 'persona asing dibuang');
+
 /* cleanText / readReply */
 ok(cleanText('<!--dme:{"cards":[]}-->\n_Dea lagi mikir..._\n\n<!--net-->\nHalo!') === 'Halo!', 'penanda layar dibuang');
 const mk = (t, ct) => new Response(t, { headers: { 'Content-Type': ct } });
@@ -89,6 +92,27 @@ ok(JSON.parse(calls.find((c) => c.url.includes('ai_chat_messages')).init.body)[1
 
 res = await w.fetch(new Request('https://w/', { method: 'GET' }), ENV, ctx);
 ok(res.status === 200, 'GET (health) lewat tanpa dibungkus');
+
+/* persona ikut tercatat; bila kolom persona belum ada (SQL lama), jatuh ke catatan tanpa persona */
+const realFetch = globalThis.fetch;
+calls.length = 0;
+globalThis.fetch = async (url, init) => {
+  calls.push({ url: String(url), init });
+  if (String(url).endsWith('/auth/v1/user')) return new Response(JSON.stringify({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }), { status: 200 });
+  return new Response(null, { status: 201 });
+};
+await logChat(ENV, { prompt: 'q', reply: 'a', chatId: SID, mode: 'ngobrol', persona: 'manja', token: 'tok', cf: {} });
+ok(JSON.parse(calls.find((c) => c.url.includes('ai_chat_sessions')).init.body).persona === 'manja', 'persona ditulis ke sesi');
+calls.length = 0;
+globalThis.fetch = async (url, init) => {
+  calls.push({ url: String(url), init });
+  if (String(url).endsWith('/auth/v1/user')) return new Response(JSON.stringify({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }), { status: 200 });
+  if (String(url).includes('ai_chat_sessions') && JSON.parse(init.body).persona) return new Response('column persona does not exist', { status: 400 });
+  return new Response(null, { status: 201 });
+};
+r = await logChat(ENV, { prompt: 'q', reply: 'a', chatId: SID, mode: 'ngobrol', persona: 'manja', token: 'tok', cf: {} });
+ok(r === 'ok' && calls.filter((c) => c.url.includes('ai_chat_sessions')).length === 2 && calls.some((c) => c.url.includes('ai_chat_messages')), 'kolom persona belum ada: tetap tercatat tanpa persona');
+globalThis.fetch = realFetch;
 
 console.log(fail ? `\n${fail} pemeriksaan GAGAL` : '\nsemua lulus');
 process.exit(fail ? 1 : 0);
