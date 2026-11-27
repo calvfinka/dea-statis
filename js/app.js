@@ -6,7 +6,7 @@
     manja: { label: "Manja", blurb: "Lembut dan nempel. Minta perhatian, tetap sopan.", sample: "Jangan pergi dulu. Aku mau nemenin kamu hari ini." },
   };
   const MODES = {
-    ngobrol: { label: "Ngobrol", title: "Mau ngobrol apa hari ini?", hint: "Curhat, jokes, atau sekadar ditemenin. Dea tidak buru-buru.", placeholder: "Curhat aja, Dea dengerin…", prompts: ["Lagi capek banget nih", "Temenin ngobrol dong", "Bikinin jokes receh"] },
+    ngobrol: { label: "Ngobrol", title: "Mau ngobrol apa hari ini?", hint: "Curhat, jokes, atau sekadar ditemenin. Dea tidak buru-buru.", placeholder: "Curhat aja…", prompts: ["Lagi capek banget nih", "Temenin ngobrol dong", "Bikinin jokes receh"] },
     gunung: { label: "Gunung", title: "Mau naik gunung mana?", hint: "Kerangka itinerary, checklist, dan hal yang wajib dicek di pengelola.", placeholder: "Tanya soal pendakian…", prompts: ["Itinerary Gunung Prau 2 hari", "Gunung apa yang cocok untuk pemula?", "Checklist perlengkapan naik gunung"] },
     konser: { label: "Konser", title: "Konser mana yang mau kamu datangi?", hint: "Budget, cara pergi, dan titik kumpul. Tanggal pasti dicek di sumber resmi.", placeholder: "Tanya soal konser…", prompts: ["Budget nonton festival di Jakarta", "Tips pergi konser sendirian", "Cara patungan tiket sama teman"] },
     trip: { label: "Trip", title: "Mau jalan ke mana kali ini?", hint: "Rute harian dan hitungan patungan, tanpa mengarang harga kaku.", placeholder: "Mau trip ke mana?", prompts: ["Itinerary Jogja 3 hari 2 malam", "Hitung patungan trip 4 orang", "Spot santai dekat Bandung"] },
@@ -506,13 +506,15 @@
     const history = chat.msgs.slice(-8);
     let answer = "";
     let src = [];
-    liveText = "Dea lagi ngetik…";
+    const web = !($("h-web") && $("h-web").getAttribute("aria-pressed") === "false");
+    liveText = files.length ? "Dea lagi baca lampiranmu…"
+      : web && state.mode === "ngobrol" && /^\s*(tolong\s+)?(riset mendalam|deep research)\s+\S/i.test(text) ? "Dea lagi riset, tunggu sebentar ya…" : "Dea lagi ngetik…";
     liveShown = true;
     render();
     const onChunk = (t) => {
       if (token !== gen) return false;
+      if (!t) return true; // belum ada jawaban: biarkan tulisan status tetap tampil
       liveText = t;
-      if (!t) return true;
       if (!liveShown) { liveShown = true; render(); } else updateLive();
       return true;
     };

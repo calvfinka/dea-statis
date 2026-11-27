@@ -213,8 +213,7 @@
     c.appendChild(menuOf([
       ["copy", "Teks polos (salin)", function () { copy(plain(context(d).a), "Disalin sebagai teks."); }],
       ["file", "Markdown (salin)", function () { var x = context(d); copy("# " + x.q + "\n\n" + x.a, "Disalin sebagai Markdown."); }],
-      ["slides", "Slide", function () { openDeck(d.previousElementSibling, context(d).q); }],
-      ["book", "Dea Docs", function () { toast("Convert ke Dea Docs segera hadir."); }]
+      ["slides", "Slide", function () { openDeck(d.previousElementSibling, context(d).q); }]
     ]));
     c.firstChild.addEventListener("click", function () { toggleMenu(c.lastChild); });
     var e = document.createElement("span"); e.className = "a-wrap";
@@ -247,6 +246,14 @@
     try {
       var inner = th.querySelector(".thread-inner"); if (!inner) return;
       inner.querySelectorAll(".msg:not(.user) .bubble").forEach(rich);
+      // "[Lampiran: a.jpg]" di judul diganti label kecil (digambar CSS, jadi tidak ikut tersalin atau dicari)
+      inner.querySelectorAll(".msg.user .bubble").forEach(function (b) {
+        var m = /\n?\[Lampiran: ([^\]]+)\]\s*$/.exec(b.textContent);
+        if (!m) return;
+        var names = m[1].split(", ");
+        b.dataset.att = names.length > 1 ? names.length + " lampiran" : /\.(jpe?g|png|webp|gif|heic)$/i.test(names[0]) ? "1 foto" : "1 file";
+        b.textContent = b.textContent.slice(0, m.index);
+      });
       inner.querySelectorAll(".msg.user").forEach(function (u) {
         var bar = u.nextElementSibling;
         if (!bar || !bar.classList.contains("t-tabs")) { bar = buildTabs(); u.after(bar); }

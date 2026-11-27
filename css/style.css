@@ -726,3 +726,7 @@ sup.cite {
 #c-plus .lu { width: 18px; height: 18px; }
 #chat-input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #c-plus { flex: 0 0 auto; }
+
+/* perapian */
+#h-create[hidden], .h-pro-l[hidden], #h-pro[hidden], .s-menu [hidden] { display: none !important; }
+.msg.user .bubble[data-att]::after { content: attr(data-att); display: table; margin-top: 8px; padding: 4px 10px; border: 1px solid rgba(236,72,153,.5); border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1.4; }

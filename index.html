@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,640;1,9..144,560&family=Outfit:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=7" />
+  <link rel="stylesheet" href="css/style.css?v=9" />
   <script>
     (function () {
       try {
@@ -127,13 +127,13 @@
           <div class="h-bar">
             <div class="h-bar-l">
               <button type="button" class="h-round" id="h-plus" aria-label="Tambah lampiran"><svg class="lu"><use href="#l-plus"/></svg></button>
-              <button type="button" class="h-tool" id="h-create"><svg class="lu"><use href="#l-spark"/></svg>Create</button>
+              <button type="button" class="h-tool" id="h-create" hidden><svg class="lu"><use href="#l-spark"/></svg>Create</button>
               <button type="button" class="h-tool icon" id="h-web" aria-pressed="true" aria-label="Cari di web"><svg class="lu"><use href="#l-globe"/></svg></button>
             </div>
             <div class="h-bar-r">
               <button type="button" class="h-round plain" id="open-voice" aria-label="Mode suara"><svg class="lu"><use href="#l-mic"/></svg></button>
-              <span class="h-pro-l">Pro</span>
-              <button type="button" class="h-switch" id="h-pro" role="switch" aria-checked="false" aria-label="Mode Pro"><i></i></button>
+              <span class="h-pro-l" hidden>Pro</span>
+              <button type="button" class="h-switch" id="h-pro" hidden role="switch" aria-checked="false" aria-label="Mode Pro"><i></i></button>
               <button type="submit" class="h-send" aria-label="Kirim"><svg class="lu"><use href="#l-up"/></svg></button>
             </div>
           </div>
@@ -201,9 +201,9 @@
         <div class="s-menu-wrap">
           <button type="button" class="s-pill s-sq" id="s-more" aria-haspopup="menu" aria-expanded="false" aria-label="Menu lainnya"><svg class="lu"><use href="#l-dots"/></svg></button>
           <div class="s-menu" id="s-menu" role="menu" hidden>
-            <button type="button" role="menuitem" data-act="docs"><svg class="lu"><use href="#l-file"/></svg>Save to Dea Docs</button>
-            <button type="button" role="menuitem" data-act="drive"><svg class="lu"><use href="#l-cloud"/></svg>Save to Google Drive</button>
-            <button type="button" role="menuitem" data-act="notion"><svg class="lu"><use href="#l-book"/></svg>Save to Notion</button>
+            <button type="button" role="menuitem" data-act="docs" hidden><svg class="lu"><use href="#l-file"/></svg>Save to Dea Docs</button>
+            <button type="button" role="menuitem" data-act="drive" hidden><svg class="lu"><use href="#l-cloud"/></svg>Save to Google Drive</button>
+            <button type="button" role="menuitem" data-act="notion" hidden><svg class="lu"><use href="#l-book"/></svg>Save to Notion</button>
             <button type="button" role="menuitem" data-act="download"><svg class="lu"><use href="#l-download"/></svg>Download</button>
             <button type="button" role="menuitem" data-act="delete" class="danger"><svg class="lu"><use href="#l-trash"/></svg>Delete Thread</button>
           </div>
@@ -288,11 +288,11 @@
       </div>
     </div>
   </div>
-  <script src="js/auth.js?v=8"></script>
-  <script src="js/chatlog.js?v=7"></script>
-  <script src="js/attach.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
-  <script src="js/home.js?v=7"></script>
-  <script src="js/thread.js?v=7"></script>
+  <script src="js/auth.js?v=9"></script>
+  <script src="js/chatlog.js?v=9"></script>
+  <script src="js/attach.js?v=9"></script>
+  <script src="js/app.js?v=9"></script>
+  <script src="js/home.js?v=9"></script>
+  <script src="js/thread.js?v=9"></script>
 </body>
 </html>
