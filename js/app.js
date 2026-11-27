@@ -132,13 +132,13 @@
       const res = await fetch("https://dme-ai.calvfinka.workers.dev", {
         method: "POST",
         headers: Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: "Bearer " + token } : {}),
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           message,
           mode: state.mode,
           history: history.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content })),
           stream: true,
           user_id: userId(),
-        }),
+        }, window.DeaChatLog ? window.DeaChatLog.fields(state.activeId) : {})),
         signal: ctrl.signal,
       });
       if (!res.ok) {

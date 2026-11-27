@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Dea AI — teman ngobrol & asisten trip | GoWithDME</title>
+  <meta name="description" content="Dea, teman AI dari GoWithDME. Curhat, ngobrol, dan bantu rencana naik gunung, konser, atau trip. Pilih suasana ceria, galak, atau manja — tetap sopan." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#f4efe6" />
+  <meta name="application-name" content="Dea" />
+  <link rel="canonical" href="https://ai.gowithdme.com/" />
+  <meta property="og:title" content="Dea AI — teman ngobrol GoWithDME" />
+  <meta property="og:description" content="Curhat, ngobrol, dan susun rencana gunung, konser, atau trip. Ceria, galak, atau manja — tetap sopan." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ai.gowithdme.com/" />
+  <meta property="og:image" content="https://ai.gowithdme.com/assets/og.jpg" />
+  <meta property="og:locale" content="id_ID" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,640;1,9..144,560&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("dea-theme");
+        var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div id="home">
+    <header class="top">
+      <a class="brand" href="#atas">
+        <span class="logo" aria-hidden="true"></span>
+        <span><strong>Dea</strong><small>GoWithDME</small></span>
+      </a>
+      <nav class="nav">
+        <a href="#suasana">Suasana</a>
+        <a href="#mode">Mode</a>
+        <a href="#fitur">Fitur</a>
+      </nav>
+      <div class="top-actions">
+        <button type="button" class="icon-btn" id="theme-home" aria-label="Mode gelap">
+          <span class="i-moon" aria-hidden="true"></span>
+          <span class="i-sun" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="btn btn-ghost" data-auth>Masuk</button>
+        <button type="button" class="btn btn-mint" data-open-chat>Ngobrol</button>
+      </div>
+    </header>
+
+    <main id="atas">
+      <section class="hero">
+        <div>
+          <p class="kicker">Teman AI · bukan chatbot kaku</p>
+          <h1>Hari yang berantakan, <em>Dea dengerin.</em></h1>
+          <p class="lede">Curhat, beresin tugas, atau susun rencana gunung, konser, dan trip. Hangat kayak bestie, tetap sopan. Riwayatnya tinggal di perangkat kamu, atau di akunmu kalau kamu masuk.</p>
+          <div class="cta-row">
+            <button type="button" class="btn btn-ink" data-open-chat>Mulai percakapan</button>
+            <button type="button" class="btn btn-ghost" id="open-voice">Coba suaranya</button>
+          </div>
+          <p class="fine">Tanpa akun. Buka file ini, langsung jalan.</p>
+        </div>
+        <div class="panel" aria-label="Demo ngobrol dengan Dea">
+          <div class="panel-head">
+            <span class="logo" aria-hidden="true"></span>
+            <div>
+              <strong>Dea sedang online</strong>
+              <small id="demo-meta">Ceria · Ngobrol</small>
+            </div>
+            <span class="dot" aria-hidden="true"></span>
+          </div>
+          <div class="log" id="demo-log" aria-live="polite"></div>
+          <form class="composer" id="demo-form">
+            <label class="sr" for="demo-input">Pesan untuk Dea</label>
+            <textarea id="demo-input" rows="1" placeholder="Curhat aja, Dea dengerin…"></textarea>
+            <button type="button" class="icon-btn" data-voice aria-label="Mode suara"><span class="i-mic"></span></button>
+            <button type="submit" class="send" aria-label="Kirim"><span class="i-send"></span></button>
+          </form>
+          <div class="chips" id="demo-chips"></div>
+        </div>
+      </section>
+
+      <section class="band" id="suasana">
+        <div class="wrap">
+          <h2>Pilih suasananya.</h2>
+          <p class="sub">Dea yang sama, tiga cara nemenin. Bukan karakter yang tiba-tiba kasar.</p>
+          <div class="picks" id="persona-picks" role="radiogroup" aria-label="Suasana Dea"></div>
+          <p class="quote" id="persona-quote"></p>
+        </div>
+      </section>
+
+      <section class="band alt" id="mode">
+        <div class="wrap">
+          <h2>Empat pintu, satu Dea.</h2>
+          <p class="sub">Ngobrol bebas, atau langsung ke urusan gunung, konser, dan trip.</p>
+          <div class="pills" id="mode-pills" role="radiogroup" aria-label="Mode"></div>
+          <div class="cards" id="mode-cards"></div>
+        </div>
+      </section>
+
+      <section class="band" id="fitur">
+        <div class="wrap">
+          <h2>Yang kerasa di tangan.</h2>
+          <div class="features">
+            <article><h3>Gelap atau terang</h3><p>Ikut mood. Pilihan tersimpan di perangkat ini.</p></article>
+            <article><h3>Ngobrol pakai suara</h3><p>Tekan mic, bicara, Dea menjawab lalu membacakannya. Butuh Chrome atau Edge.</p></article>
+            <article><h3>Riwayat yang nempel</h3><p>Percakapan tinggal di browser. Hapus satu utas kapan saja.</p></article>
+            <article><h3>Tiga suasana</h3><p>Ceria, galak, atau manja. Nada berubah, sopan santunnya tidak.</p></article>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="foot">
+      <p>Dea · GoWithDME. Teman ngobrol, bukan pengganti bantuan profesional.</p>
+      <p>Ceria, galak, manja. Tetap sopan.</p>
+    </footer>
+  </div>
+
+  <div id="studio" hidden>
+    <aside class="rail" id="rail">
+      <div class="rail-top">
+        <button type="button" class="brand" data-open-home>
+          <span class="logo" aria-hidden="true"></span>
+          <strong>Dea</strong>
+        </button>
+        <button type="button" class="icon-btn rail-x" id="close-rail" aria-label="Tutup riwayat"><span class="i-x"></span></button>
+      </div>
+      <button type="button" class="btn btn-ghost wide" id="new-chat">Obrolan baru</button>
+      <div class="history" id="history"></div>
+      <div class="rail-foot">
+        <p class="label">Suasana Dea</p>
+        <div class="picks compact" id="persona-side" role="radiogroup" aria-label="Suasana di chat"></div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+    <section class="stage">
+      <header class="stage-bar">
+        <button type="button" class="icon-btn only-mobile" id="open-rail" aria-label="Riwayat"><span class="i-menu"></span></button>
+        <div class="pills grow" id="mode-bar" role="radiogroup" aria-label="Mode chat"></div>
+        <button type="button" class="icon-btn" id="theme-chat" aria-label="Mode gelap">
+          <span class="i-moon"></span><span class="i-sun"></span>
+        </button>
+        <button type="button" class="btn btn-ghost" id="stop" hidden>Berhenti</button>
+        <button type="button" class="btn btn-ghost" data-auth>Masuk</button>
+      </header>
+      <div class="thread" id="thread"></div>
+      <div class="dock">
+        <form class="composer" id="chat-form">
+          <label class="sr" for="chat-input">Pesan untuk Dea</label>
+          <textarea id="chat-input" rows="1" placeholder="Tulis pesan…"></textarea>
+          <button type="button" class="icon-btn" data-voice aria-label="Mode suara"><span class="i-mic"></span></button>
+          <button type="submit" class="send" aria-label="Kirim"><span class="i-send"></span></button>
+        </form>
+        <p class="fine center">Dea bisa keliru. Untuk gunung dan tiket, cek sumber resmi.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="voice" id="voice" hidden role="dialog" aria-modal="true" aria-label="Ngobrol suara dengan Dea">
+    <div class="voice-card">
+      <div class="voice-top">
+        <div>
+          <p class="kicker" id="voice-kicker">Suara</p>
+          <h2>Dea lagi di dekat kamu.</h2>
+        </div>
+        <button type="button" class="icon-btn" id="close-voice" aria-label="Tutup suara"><span class="i-x"></span></button>
+      </div>
+      <div class="orb" id="orb"><span class="i-mic"></span></div>
+      <p class="voice-note" id="voice-note" aria-live="polite">Tekan tombol, bicara dalam bahasa Indonesia, lalu diam.</p>
+      <div class="cta-row">
+        <button type="button" class="btn btn-mint grow" id="listen">Mulai bicara</button>
+        <button type="button" class="btn btn-ghost" id="voice-type">Ketik saja</button>
+      </div>
+    </div>
+  </div>
+  <div class="voice" id="login" hidden role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <div class="voice-card login-card">
+      <div class="voice-top">
+        <div>
+          <h2 id="login-title">Masuk ke GoWithDME</h2>
+          <p class="fine" id="login-sub"></p>
+        </div>
+        <button type="button" class="icon-btn" id="login-x" aria-label="Tutup"><span class="i-x"></span></button>
+      </div>
+      <p class="login-msg" id="login-msg" hidden></p>
+
+      <div id="login-main">
+        <div class="login-grid" id="login-providers" role="group" aria-label="Masuk dengan akun lain"></div>
+        <p class="login-or">atau pakai email</p>
+        <form id="login-form" novalidate>
+          <input type="email" id="login-email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="nama@email.com" aria-label="Email" />
+          <input type="password" id="login-pass" autocomplete="current-password" placeholder="Password" aria-label="Password" />
+          <button type="submit" class="btn btn-mint">Masuk</button>
+          <div class="login-row">
+            <button type="button" class="btn btn-ghost" id="login-forgot">Lupa password</button>
+            <button type="button" class="btn btn-ghost" id="login-magic">Kirim link masuk</button>
+          </div>
+        </form>
+        <p class="fine center">Belum punya akun? <a href="https://gowithdme.com/login" target="_blank" rel="noopener">Daftar di gowithdme.com</a></p>
+        <p class="fine center">Dengan masuk, kamu menyetujui <a href="https://gowithdme.com/terms" target="_blank" rel="noopener">Syarat</a> dan <a href="https://gowithdme.com/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a> GoWithDME.</p>
+      </div>
+
+      <form id="login-recovery" hidden>
+        <input type="password" id="login-newpass" minlength="8" autocomplete="new-password" placeholder="Password baru" aria-label="Password baru" />
+        <button type="submit" class="btn btn-mint">Simpan password</button>
+      </form>
+
+      <div id="login-akun" hidden>
+        <button type="button" class="btn btn-ghost wide-btn" id="login-out">Keluar</button>
+      </div>
+    </div>
+  </div>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -21,6 +21,7 @@ import { searchInternet, searchContext, buildSearchQuery, providerOf } from './s
 import { browseTop, pagesContext, browseEnabled } from './browse.js';
 import { loadMemory, memoryLayer, bearer as memBearer } from './memory.js';
 import { logUsage, purgeUsage, purgeTraining, topicOf, deviceOf, estTokens } from './usage.js';
+import { wrapChatLog } from './chatlog.js';
 
 /* Kelas Durable Object penghitung jatah; harus diekspor dari berkas utama (lihat [[durable_objects]] di wrangler.toml). */
 export { Limiter } from './guard.js';
@@ -914,7 +915,7 @@ async function pingSupabase(env) {
   } finally { clearTimeout(timer); }
 }
 
-export default {
+const deaCore = {
   async fetch(request, env, ctx) {
     const allowed = (env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : DEFAULT_ORIGINS).map(s => s.trim());
     const origin = request.headers.get('Origin') || '';
@@ -1196,5 +1197,7 @@ export default {
     }
   }
 };
+
+export default wrapChatLog(deaCore);
 
 export { needsInternet, asksNetAbility, makeTidy, thinkNote, callGeminiSearch, gemModel, groqModel, grokModel, pingSupabase, checkHealth, eventCards, cardsPrefix, plan, loadExamples, pickExamples, examplesContext, PROMPTS, pickKnowledge, pickMountains, pickPosts, siteContext, fold, wibToday, pickEvents, eventContext, cleanHistory, clip, tooLong, MAX_CHARS, cleanSources, sourcesFromEvents, sourceContext, cleanAttachments, groqMessages, geminiContents, sseText };
